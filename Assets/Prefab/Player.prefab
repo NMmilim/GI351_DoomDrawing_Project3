@@ -9,10 +9,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1721151341343618217}
-  - component: {fileID: 1785389422711281822}
-  m_Layer: 0
+  - component: {fileID: 6652318854625240897}
+  m_Layer: 7
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -35,7 +35,7 @@ Transform:
   - {fileID: 1141576525468926562}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1785389422711281822
+--- !u!114 &6652318854625240897
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -44,13 +44,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 3738353703506281237}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 61b86c94ed9ed15499ec06c894e05b64, type: 3}
+  m_Script: {fileID: 11500000, guid: 0061b2c0f0c476545a652f9239309ebe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::player_controller
   mouse_transform: {fileID: 0}
-  angle_offset: 0
-  bulletPrefab: {fileID: 4687438175499242467, guid: 16d6ca9e129a4b94a9d7b37ce1ead41f, type: 3}
-  firePos: {fileID: 0}
+  leftPrefab: {fileID: 4687438175499242467, guid: 16d6ca9e129a4b94a9d7b37ce1ead41f, type: 3}
+  rightPrefab: {fileID: 2351833249007622462, guid: 9653f8b853686f14aa08d6e09d99f7dd, type: 3}
+  firePoint: {fileID: 1141576525468926562}
+  fireRate: 0.5
 --- !u!1 &4661974627617582918
 GameObject:
   m_ObjectHideFlags: 0
@@ -60,7 +61,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1141576525468926562}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Firepos
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -92,7 +93,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7214027122747753067}
   - component: {fileID: 2931488450315173522}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -184,7 +185,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3462589052650114578}
   - component: {fileID: 2960648685632193240}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Cannon
   m_TagString: Untagged
   m_Icon: {fileID: 0}

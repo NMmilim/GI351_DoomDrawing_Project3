@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 2238178803143124385}
   m_Layer: 0
   m_Name: Ball
-  m_TagString: Untagged
+  m_TagString: Bullet
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -112,7 +112,8 @@ MonoBehaviour:
   enemy_tag: Enemy
   enemy_layers:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 0
+  damage: 1
 --- !u!50 &-8743333144315641578
 Rigidbody2D:
   serializedVersion: 5
