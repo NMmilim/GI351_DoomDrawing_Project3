@@ -31,18 +31,41 @@ public class Bullet : MonoBehaviour
     //// Called when the bullet's collider is set to "Is Trigger" (passes through, no bounce)
     protected virtual void OnTriggerEnter2D(Collider2D other)
     {
+        if (CheckAmmoDrop(other.gameObject)) return;
+
         TryHit(other.gameObject);
+        Rock rock = other.gameObject.GetComponent<Rock>();
+        if (rock != null)
+        {
+            rock.TakeDamage(damage);
+            ComboManager.RegisterHit();
+        }
     }
 
     // Called when the bullet's collider is NOT a trigger (solid, physical hit)
     protected virtual void OnCollisionEnter2D(Collision2D collision)
     {
+        if (CheckAmmoDrop(collision.gameObject)) return;
+
         TryHit(collision.gameObject);
         Rock rock = collision.gameObject.GetComponent<Rock>();
         if (rock != null)
         {
             rock.TakeDamage(damage);
+            ComboManager.RegisterHit();
         }
+    }
+
+    protected bool CheckAmmoDrop(GameObject target)
+    {
+        AmmoDrop drop = target.GetComponent<AmmoDrop>();
+        if (drop != null)
+        {
+            drop.Collect();
+            Destroy(gameObject);
+            return true;
+        }
+        return false;
     }
 
     protected bool IsEnemy(GameObject target)

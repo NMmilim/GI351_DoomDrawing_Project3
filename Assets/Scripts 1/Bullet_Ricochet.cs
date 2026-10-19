@@ -79,11 +79,22 @@ public class Bullet_Ricochet : Bullet
 
     private void HandleHit(GameObject target, Vector2 surface_normal)
     {
+        AmmoDrop drop = target.GetComponent<AmmoDrop>();
+        if (drop != null)
+        {
+            drop.Collect();
+            return;
+        }
+
         if (!IsEnemy(target)) return;      // walls etc. are left to normal physics
         if (target == last_hit) return;    // ignore touching the enemy we just ricocheted off
 
         Rock rock = target.GetComponent<Rock>();
-        if (rock != null) rock.TakeDamage(damage);
+        if (rock != null)
+        {
+            rock.TakeDamage(damage);
+            ComboManager.RegisterHit();
+        }
 
         last_hit = target;
         hit_enemies.Add(target);

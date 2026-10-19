@@ -107,7 +107,7 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 7
+  m_Mass: 4
   m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_GravityScale: 0
@@ -120,7 +120,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!60 &6725553795192042300
 PolygonCollider2D:
@@ -194,3 +194,27 @@ MonoBehaviour:
   damage: 1
   hp: 1
   maxhp: 3
+  earthTransform: {fileID: 3823338623603667170, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+  earthRadius: 2.35
+  gravityStrength: 30
+  minGravityDistance: 1.5
+  terminalVelocity: 5
+  initialInwardSpeed: 1.5
+  randomTumbleSpeed: 35
+  tangentialDamping: 0.6
+  regularDropChance: 0.4
+  regularDropAmount: 30
+  regularDropPrefab: {fileID: 7793480531654306726, guid: 849d29945f030ee48a414f352d43e9a7, type: 3}
+  ricochetDropChance: 0.2
+  ricochetDropAmount: 5
+  ricochetDropPrefab: {fileID: 891058593010086259, guid: ed1073f7676eb40479188414260ab80d, type: 3}
+  separationRadius: 2
+  separationForce: 15
+  spawnDamageGracePeriod: 1.5
+  minCollisionDamageSpeed: 2.5
+  explodeOnDeath: 1
+  explosionRadius: 3
+  explosionDamageFraction: 0.5
+  explosionForce: 12
+  explosionCountsForCombo: 1
+  explosionVFXPrefab: {fileID: 0}

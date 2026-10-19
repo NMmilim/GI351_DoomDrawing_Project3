@@ -112,7 +112,7 @@ MonoBehaviour:
   enemy_tag: Enemy
   enemy_layers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 8
   damage: 1
 --- !u!50 &-8743333144315641578
 Rigidbody2D:
