@@ -28,7 +28,7 @@ public class Bullet : MonoBehaviour
         if (life_timer <= 0f) Destroy(gameObject);   // clean up if it never hits anything
     }
 
-    //// Called when the bullet's collider is set to "Is Trigger" (passes through, no bounce)
+    // Called when the bullet's collider is set to "Is Trigger" (passes through, no bounce)
     protected virtual void OnTriggerEnter2D(Collider2D other)
     {
         if (CheckAmmoDrop(other.gameObject)) return;
@@ -37,8 +37,11 @@ public class Bullet : MonoBehaviour
         Rock rock = other.gameObject.GetComponent<Rock>();
         if (rock != null)
         {
-            rock.TakeDamage(damage);
-            ComboManager.RegisterHit();
+            if (!rock.immuneToNormalFire)
+            {
+                ComboManager.RegisterHit();
+            }
+            rock.TakeDamage(damage, isExplosionOrPiercing: false);
         }
     }
 
@@ -51,8 +54,11 @@ public class Bullet : MonoBehaviour
         Rock rock = collision.gameObject.GetComponent<Rock>();
         if (rock != null)
         {
-            rock.TakeDamage(damage);
-            ComboManager.RegisterHit();
+            if (!rock.immuneToNormalFire)
+            {
+                ComboManager.RegisterHit();
+            }
+            rock.TakeDamage(damage, isExplosionOrPiercing: false);
         }
     }
 

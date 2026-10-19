@@ -148,6 +148,18 @@ MonoBehaviour:
   rightPrefab: {fileID: 2351833249007622462, guid: 9653f8b853686f14aa08d6e09d99f7dd, type: 3}
   firePoint: {fileID: 3506775369910093912}
   fireRate: 0.3
+  lightningCooldown: 3
+  maxChainTargets: 5
+  lightningDamage: 2
+  lightningRange: 14
+  chainRadius: 7.5
+  beamDuration: 0.25
+  lightningKnockback: 8
+  lightningTargetLayers:
+    serializedVersion: 2
+    m_Bits: 8
+  lightningUsesAmmo: 1
+  lightningBeamPrefab: {fileID: 0}
   regularAmmo: 89
   maxRegularAmmo: 180
   ricochetAmmo: 15

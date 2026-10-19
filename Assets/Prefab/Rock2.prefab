@@ -187,6 +187,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 126bc43d28cd6304cbd541d9e569498d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Rock
+  meteorType: 0
+  autoConfigureStatsFromType: 1
+  immuneToNormalFire: 0
+  baseResourceDrop: 7
+  baseChainCost: 5
+  blastRadiusMultiplier: 2.5
+  vortexPullForce: 22
   enemy_tag: Enemy
   enemy_layers:
     serializedVersion: 2
@@ -196,24 +203,18 @@ MonoBehaviour:
   maxhp: 1
   earthTransform: {fileID: 3823338623603667170, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
   earthRadius: 2.35
-  gravityStrength: 15
+  gravityStrength: 30
+  outwardBrakeRate: 12
   minGravityDistance: 1.5
   terminalVelocity: 5
-  initialInwardSpeed: 1.5
+  initialInwardSpeed: 0.3
   randomTumbleSpeed: 35
   tangentialDamping: 0.6
-  regularDropChance: 0.4
-  regularDropAmount: 30
-  regularDropPrefab: {fileID: 7793480531654306726, guid: 849d29945f030ee48a414f352d43e9a7, type: 3}
-  ricochetDropChance: 0.2
-  ricochetDropAmount: 5
-  ricochetDropPrefab: {fileID: 891058593010086259, guid: ed1073f7676eb40479188414260ab80d, type: 3}
   separationRadius: 2
   separationForce: 15
   spawnDamageGracePeriod: 1.5
   minCollisionDamageSpeed: 2.5
   explodeOnDeath: 1
-  explosionRadius: 3
   explosionDamageFraction: 0.5
   explosionForce: 12
   explosionCountsForCombo: 1
