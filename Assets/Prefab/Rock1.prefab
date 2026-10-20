@@ -207,7 +207,7 @@ MonoBehaviour:
   outwardBrakeRate: 12
   minGravityDistance: 1.5
   terminalVelocity: 5
-  initialInwardSpeed: 0.3
+  initialInwardSpeed: 0.2
   randomTumbleSpeed: 35
   tangentialDamping: 0.6
   separationRadius: 2
