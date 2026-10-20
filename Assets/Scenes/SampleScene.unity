@@ -135,17 +135,97 @@ PrefabInstance:
       propertyPath: minSpawnRadius
       value: 26.6
       objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: timeBetweenWaves
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: tankyMeteor.prefab
+      value: 
+      objectReference: {fileID: 4218922805399213022, guid: 5f80805e99def054ea5b6506eb969d40, type: 3}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: weakAsteroidPrefab
+      value: 
+      objectReference: {fileID: 1000000000000001, guid: a1111111111111111111111111111001, type: 3}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: normalMeteor.prefab
+      value: 
+      objectReference: {fileID: 1000000000000001, guid: a1111111111111111111111111111001, type: 3}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: speedyMeteor.prefab
+      value: 
+      objectReference: {fileID: 357800034813821830, guid: 5101d79e342ad6a43ae59cd2ca202beb, type: 3}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: mediumAsteroidPrefab
+      value: 
+      objectReference: {fileID: 1000000000000001, guid: a1111111111111111111111111111002, type: 3}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: tankyMeteor.sizeScale
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: speedyMeteor.sizeScale
+      value: 0.3
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: tankyMeteor.initialSpeed
+      value: 0.26
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: normalMeteor.initialSpeed
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: tankyMeteor.sprites.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: speedyMeteor.sprites.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: 'tankyMeteor.sprites.Array.data[0]'
+      value: 
+      objectReference: {fileID: -1171411547549454312, guid: b5fab93718830c341bfc539961520f21, type: 3}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: 'speedyMeteor.sprites.Array.data[0]'
+      value: 
+      objectReference: {fileID: -3852117235588928371, guid: 1a7905359ca0ab14aa456666d3a8d022, type: 3}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: normalMeteor.variantPrefabs.Array.size
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: speedyMeteor.variantPrefabs.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: 'normalMeteor.variantPrefabs.Array.data[0]'
+      value: 
+      objectReference: {fileID: 1000000000000001, guid: a1111111111111111111111111111001, type: 3}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: 'normalMeteor.variantPrefabs.Array.data[1]'
+      value: 
+      objectReference: {fileID: 1000000000000001, guid: a1111111111111111111111111111002, type: 3}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: 'normalMeteor.variantPrefabs.Array.data[2]'
+      value: 
+      objectReference: {fileID: 1000000000000001, guid: a1111111111111111111111111111003, type: 3}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: 'speedyMeteor.variantPrefabs.Array.data[0]'
+      value: 
+      objectReference: {fileID: 357800034813821830, guid: 5101d79e342ad6a43ae59cd2ca202beb, type: 3}
     - target: {fileID: 3823338623603667170, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
       propertyPath: m_LocalScale.x
-      value: 7.4341326
+      value: 4.0172567
       objectReference: {fileID: 0}
     - target: {fileID: 3823338623603667170, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
       propertyPath: m_LocalScale.y
-      value: 7.4341326
+      value: 4.0172567
       objectReference: {fileID: 0}
     - target: {fileID: 3823338623603667170, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
       propertyPath: m_LocalScale.z
-      value: 7.4341326
+      value: 4.0172567
       objectReference: {fileID: 0}
     - target: {fileID: 3823338623603667170, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
       propertyPath: m_LocalPosition.x
@@ -569,7 +649,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &1526098692
+--- !u!1001 &1874960677
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -577,22 +657,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 2382969925216012215, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 1.1066108
-      objectReference: {fileID: 0}
-    - target: {fileID: 2382969925216012215, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 1.1066108
-      objectReference: {fileID: 0}
-    - target: {fileID: 2382969925216012215, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
-      propertyPath: m_LocalScale.z
-      value: 1.1066108
-      objectReference: {fileID: 0}
-    - target: {fileID: 2382969925216012215, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -0.13773
-      objectReference: {fileID: 0}
     - target: {fileID: 2977109966474562765, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
       propertyPath: m_Name
       value: cannon
@@ -636,14 +700,6 @@ PrefabInstance:
     - target: {fileID: 3118144879896007343, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5446394182544936124, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
-      propertyPath: orbitDistance
-      value: 5.64
-      objectReference: {fileID: 0}
-    - target: {fileID: 5446394182544936124, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
-      propertyPath: maxChainTargets
-      value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -766,4 +822,4 @@ SceneRoots:
   - {fileID: 179635775}
   - {fileID: 1248983058}
   - {fileID: 105861152}
-  - {fileID: 1526098692}
+  - {fileID: 1874960677}
