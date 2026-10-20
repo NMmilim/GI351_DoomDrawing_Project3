@@ -39,6 +39,8 @@ public class Rock : MonoBehaviour
     public int maxhp = 1;
 
     [Header("Visual Sprites & Variants")]
+    [Tooltip("If true, preserves any existing sprite assigned to this prefab's SpriteRenderer rather than overriding it with spawner sprites.")]
+    public bool retainExistingSprite = true;
     [Tooltip("Optional custom sprites for this meteor prefab. If assigned, one is randomly selected on start.")]
     [SerializeField] private Sprite[] customSprites;
 
@@ -181,10 +183,10 @@ public class Rock : MonoBehaviour
             chosenSprite = customSprites[Random.Range(0, customSprites.Length)];
         }
 
-        if (chosenSprite != null)
+        SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
+        if (sr != null && (sr.sprite == null || !retainExistingSprite))
         {
-            SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
-            if (sr != null)
+            if (chosenSprite != null)
             {
                 sr.sprite = chosenSprite;
             }
