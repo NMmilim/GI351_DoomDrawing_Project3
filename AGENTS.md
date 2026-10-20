@@ -166,7 +166,7 @@ All weapons consume a shared **Resource Pool** earned from destroying meteors.
   - [x] Activation key trigger for unlimited free firing duration.
 - [x] **Endless Mode & Instant Game Over:**
   - [x] Instant Game Over when any meteor impacts Earth's surface.
-- [ ] **Weapon Arsenal Expansion:**
+- [x] **Weapon Arsenal Expansion:**
   - [x] Laser Cannon (Cost: 10, Pierce: 0, Medium speed).
-  - [ ] Railgun (Cost: 25, Pierce: 1, High speed, destroys Tanky/Magnet).
-  - [ ] Disposable Mine (Cost: 50, Slow, shoot-to-detonate, time-scaling radius).
+  - [x] Railgun (Cost: 25, Pierce: 1, High speed, destroys Tanky/Magnet).
+  - [x] Disposable Mine (Cost: 50, Slow, shoot-to-detonate, time-scaling radius).

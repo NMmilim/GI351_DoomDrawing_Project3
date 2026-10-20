@@ -127,6 +127,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: maxSpawnRadius
+      value: 37.8
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: minSpawnRadius
+      value: 26.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 3823338623603667170, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 7.4341326
+      objectReference: {fileID: 0}
+    - target: {fileID: 3823338623603667170, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 7.4341326
+      objectReference: {fileID: 0}
+    - target: {fileID: 3823338623603667170, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 7.4341326
+      objectReference: {fileID: 0}
     - target: {fileID: 3823338623603667170, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -174,10 +194,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 6441513202956258216, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2020740599}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
 --- !u!1 &179635774
 GameObject:
@@ -317,7 +334,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 4.314975
+  orthographic size: 15
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -342,8 +359,8 @@ Transform:
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 4.38856, y: 0.84543234, z: -8.616229}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 4.38856, y: 0.84543, z: -8.616229}
+  m_LocalScale: {x: 0.9859904, y: 0.9859904, z: 0.9859904}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 892572528}
@@ -513,8 +530,8 @@ Transform:
   m_GameObject: {fileID: 892572527}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4.03, y: -0.87, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: -5.5282, y: -1.0182, z: 2.5176}
+  m_LocalScale: {x: 1.2934878, y: 1.2934878, z: 1.2934878}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 519420032}
@@ -560,6 +577,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2382969925216012215, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.1066108
+      objectReference: {fileID: 0}
+    - target: {fileID: 2382969925216012215, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.1066108
+      objectReference: {fileID: 0}
+    - target: {fileID: 2382969925216012215, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.1066108
+      objectReference: {fileID: 0}
+    - target: {fileID: 2382969925216012215, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.13773
+      objectReference: {fileID: 0}
     - target: {fileID: 2977109966474562765, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
       propertyPath: m_Name
       value: cannon
@@ -603,6 +636,14 @@ PrefabInstance:
     - target: {fileID: 3118144879896007343, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5446394182544936124, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
+      propertyPath: orbitDistance
+      value: 5.64
+      objectReference: {fileID: 0}
+    - target: {fileID: 5446394182544936124, guid: 0f790489347c0b34a8d45548bc419b4a, type: 3}
+      propertyPath: maxChainTargets
+      value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -654,7 +695,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 886251e9a18ece04ea8e61686c173e1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachinePositionComposer
-  CameraDistance: 10
+  CameraDistance: 9.94
   DeadZoneDepth: 0
   Composition:
     ScreenPosition: {x: 0, y: 0}
@@ -698,7 +739,7 @@ MonoBehaviour:
     CustomLookAtTarget: 0
   Lens:
     FieldOfView: 34
-    OrthographicSize: 4.314975
+    OrthographicSize: 15
     NearClipPlane: 0.3
     FarClipPlane: 1000
     Dutch: 0
@@ -716,46 +757,6 @@ MonoBehaviour:
       BarrelClipping: 0.25
       Anamorphism: 0
   BlendHint: 0
---- !u!1 &2020740594 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 6441513202956258216, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
-  m_PrefabInstance: {fileID: 105861152}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &2020740598 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 3823338623603667170, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
-  m_PrefabInstance: {fileID: 105861152}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &2020740599
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2020740594}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b09d7499778c21142bc53355ed0261eb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AsteroidSpawner
-  earthCenter: {fileID: 2020740598}
-  minSpawnRadius: 11.5
-  maxSpawnRadius: 13.5
-  weakAsteroidPrefab: {fileID: 843497663982951601, guid: 9347dcedfbc1a6b429df62110b5fba09, type: 3}
-  weakWeight: 70
-  mediumAsteroidPrefab: {fileID: 1903496005659868609, guid: 4d4822ddbca94434b8b0ca43182e51d1, type: 3}
-  mediumWeight: 30
-  currentWave: 1
-  baseWaveCount: 6
-  countIncreasePerWave: 3
-  timeBetweenWaves: 4
-  minChunkSize: 3
-  maxChunkSize: 5
-  timeBetweenChunks: 3
-  minSeparationDistance: 2.2
-  radialDepthStep: 1.8
-  chunkSpreadAngle: 30
-  showWaveHUD: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

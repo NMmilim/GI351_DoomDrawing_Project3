@@ -32,6 +32,7 @@ public class Bullet : MonoBehaviour
     protected virtual void OnTriggerEnter2D(Collider2D other)
     {
         if (CheckAmmoDrop(other.gameObject)) return;
+        if (CheckDisposableMine(other.gameObject)) return;
 
         TryHit(other.gameObject);
         Rock rock = other.gameObject.GetComponent<Rock>();
@@ -49,6 +50,7 @@ public class Bullet : MonoBehaviour
     protected virtual void OnCollisionEnter2D(Collision2D collision)
     {
         if (CheckAmmoDrop(collision.gameObject)) return;
+        if (CheckDisposableMine(collision.gameObject)) return;
 
         TryHit(collision.gameObject);
         Rock rock = collision.gameObject.GetComponent<Rock>();
@@ -60,6 +62,18 @@ public class Bullet : MonoBehaviour
             }
             rock.TakeDamage(damage, isExplosionOrPiercing: false);
         }
+    }
+
+    protected bool CheckDisposableMine(GameObject target)
+    {
+        DisposableMine mine = target.GetComponent<DisposableMine>();
+        if (mine != null && !mine.IsDetonated)
+        {
+            mine.Detonate();
+            Destroy(gameObject);
+            return true;
+        }
+        return false;
     }
 
     protected bool CheckAmmoDrop(GameObject target)

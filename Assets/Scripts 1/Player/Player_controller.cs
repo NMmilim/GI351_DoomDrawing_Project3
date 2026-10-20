@@ -2,6 +2,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+public enum WeaponType
+{
+    LaserCannon = 0,
+    Railgun = 1,
+    DisposableMine = 2
+}
+
 public class Player_controller : MonoBehaviour
 {
     public static Player_controller Instance { get; private set; }
@@ -20,12 +27,21 @@ public class Player_controller : MonoBehaviour
     [Tooltip("Pull force inertia / smoothing time in seconds. Higher = heavier feel with smooth acceleration and deceleration.")]
     [SerializeField] private float smoothTime = 0.2f;
 
-    [Header("Bullet")]
+    [Header("Weapon Arsenal (Switch with 1, 2, 3 or Scroll Wheel)")]
+    [Tooltip("Currently selected weapon from the arsenal.")]
+    [SerializeField] private WeaponType currentWeapon = WeaponType.LaserCannon;
+    [Tooltip("Primary Laser Cannon bullet prefab.")]
     [SerializeField] private Transform leftPrefab;
-    [Tooltip("Legacy ricochet bullet prefab reference (now replaced by Chain Lightning).")]
-    [SerializeField] private Transform rightPrefab;
+    [Tooltip("Heavy penetration Railgun bullet prefab. If null, a high-velocity piercing beam is procedurally generated.")]
+    [SerializeField] private GameObject railgunPrefab;
+    [Tooltip("Tactical Disposable Mine prefab. If null, a scaling tactical mine is procedurally generated.")]
+    [SerializeField] private GameObject disposableMinePrefab;
     [SerializeField] private Transform firePoint;
-    [SerializeField] private float fireRate = 0.3f;
+
+    [Header("Weapon Firing Rates")]
+    [SerializeField] private float fireRate = 0.25f;
+    [SerializeField] private float railgunFireRate = 0.45f;
+    [SerializeField] private float mineFireRate = 0.75f;
     private float nextFireTime;
 
     [Header("Chain Lightning (Right Click Secondary Weapon)")]
@@ -59,11 +75,15 @@ public class Player_controller : MonoBehaviour
     [Tooltip("Optional custom beam visual prefab (with LineRenderer). If null, a procedural electric LineRenderer is generated.")]
     [SerializeField] private GameObject lightningBeamPrefab;
 
-    [Header("Unified Resource Economy")]
+    [Header("Unified Resource Economy & Weapon Costs")]
     [Tooltip("Current unified resource pool. Earned from destroying meteors.")]
     [SerializeField] private int resources = 100;
     [Tooltip("Resource cost to fire the primary Laser Cannon (10 resources). 0 during Overload.")]
     [SerializeField] private int laserCannonCost = 10;
+    [Tooltip("Resource cost to fire the heavy Railgun (25 resources). 0 during Overload.")]
+    [SerializeField] private int railgunCost = 25;
+    [Tooltip("Resource cost to deploy a Disposable Mine (50 resources). 0 during Overload.")]
+    [SerializeField] private int disposableMineCost = 50;
     [Tooltip("Resource cost to fire the Chain Lightning secondary weapon.")]
     [SerializeField] private int lightningResourceCost = 25;
 
@@ -75,6 +95,7 @@ public class Player_controller : MonoBehaviour
     private float angleVelocity;
 
     // Public Getters for Economy & Weapon Systems
+    public WeaponType CurrentWeapon => currentWeapon;
     public int Resources => resources;
     public int RegularAmmo => resources; // Legacy alias
     public int MaxRegularAmmo => -1;     // Unlimited capacity pool
@@ -170,18 +191,12 @@ public class Player_controller : MonoBehaviour
     {
         MouseAim();
 
+        HandleWeaponSwitching();
+
         if (Mouse.current == null) return;
 
-        // Primary Fire: Laser Cannon (Left click, full-auto): requires 10 resources (0 during Overload)
-        if (Mouse.current.leftButton.isPressed && Time.time >= nextFireTime)
-        {
-            if (CanAfford(laserCannonCost))
-            {
-                ConsumeResources(laserCannonCost);
-                Instantiate(leftPrefab, firePoint.position, firePoint.rotation);
-                nextFireTime = Time.time + fireRate;
-            }
-        }
+        // Fire active primary weapon based on selection
+        HandleWeaponFiring();
 
         // Chain Lightning cooldown tick
         if (lightningCooldownTimer > 0f)
@@ -202,6 +217,127 @@ public class Player_controller : MonoBehaviour
                     lightningCooldownTimer = lightningCooldown;
                 }
             }
+        }
+    }
+
+    private void HandleWeaponSwitching()
+    {
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.digit1Key.wasPressedThisFrame) currentWeapon = WeaponType.LaserCannon;
+            else if (Keyboard.current.digit2Key.wasPressedThisFrame) currentWeapon = WeaponType.Railgun;
+            else if (Keyboard.current.digit3Key.wasPressedThisFrame) currentWeapon = WeaponType.DisposableMine;
+        }
+
+        if (Mouse.current != null)
+        {
+            float scroll = Mouse.current.scroll.ReadValue().y;
+            if (scroll > 0.1f)
+            {
+                int prev = ((int)currentWeapon + 2) % 3;
+                currentWeapon = (WeaponType)prev;
+            }
+            else if (scroll < -0.1f)
+            {
+                int next = ((int)currentWeapon + 1) % 3;
+                currentWeapon = (WeaponType)next;
+            }
+        }
+    }
+
+    private void HandleWeaponFiring()
+    {
+        switch (currentWeapon)
+        {
+            case WeaponType.LaserCannon:
+                if (Mouse.current.leftButton.isPressed && Time.time >= nextFireTime)
+                {
+                    FireLaserCannon();
+                }
+                break;
+
+            case WeaponType.Railgun:
+                if ((Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.leftButton.isPressed) && Time.time >= nextFireTime)
+                {
+                    FireRailgun();
+                }
+                break;
+
+            case WeaponType.DisposableMine:
+                if (Mouse.current.leftButton.wasPressedThisFrame && Time.time >= nextFireTime)
+                {
+                    FireDisposableMine();
+                }
+                break;
+        }
+    }
+
+    private void FireLaserCannon()
+    {
+        if (CanAfford(laserCannonCost))
+        {
+            ConsumeResources(laserCannonCost);
+            Instantiate(leftPrefab, firePoint.position, firePoint.rotation);
+            nextFireTime = Time.time + fireRate;
+        }
+    }
+
+    private void FireRailgun()
+    {
+        if (CanAfford(railgunCost))
+        {
+            ConsumeResources(railgunCost);
+            if (railgunPrefab != null)
+            {
+                Instantiate(railgunPrefab, firePoint.position, firePoint.rotation);
+            }
+            else
+            {
+                // Procedural Railgun projectile: spawns and configures RailgunBullet with piercing cyan trail
+                Transform slug = Instantiate(leftPrefab, firePoint.position, firePoint.rotation);
+                Bullet oldBullet = slug.GetComponent<Bullet>();
+                if (oldBullet != null) Destroy(oldBullet);
+                slug.gameObject.AddComponent<RailgunBullet>();
+            }
+            nextFireTime = Time.time + railgunFireRate;
+        }
+    }
+
+    private void FireDisposableMine()
+    {
+        if (CanAfford(disposableMineCost))
+        {
+            ConsumeResources(disposableMineCost);
+
+            Vector2 mouseWorld = Camera.main != null ? (Vector2)Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue()) : (Vector2)transform.position + (Vector2)firePoint.right * 4f;
+
+            GameObject mineObj;
+            if (disposableMinePrefab != null)
+            {
+                mineObj = Instantiate(disposableMinePrefab, firePoint.position, Quaternion.identity);
+            }
+            else
+            {
+                mineObj = new GameObject("DisposableMine");
+                mineObj.transform.position = firePoint.position;
+                mineObj.transform.localScale = Vector3.one * 0.45f;
+                SpriteRenderer sr = mineObj.AddComponent<SpriteRenderer>();
+                sr.color = new Color(1f, 0.45f, 0.1f);
+                if (leftPrefab != null)
+                {
+                    SpriteRenderer bulletSr = leftPrefab.GetComponent<SpriteRenderer>();
+                    if (bulletSr != null)
+                    {
+                        sr.sprite = bulletSr.sprite;
+                    }
+                }
+            }
+
+            DisposableMine mine = mineObj.GetComponent<DisposableMine>();
+            if (mine == null) mine = mineObj.AddComponent<DisposableMine>();
+            mine.Initialize(mouseWorld);
+
+            nextFireTime = Time.time + mineFireRate;
         }
     }
 
@@ -322,6 +458,14 @@ public class Player_controller : MonoBehaviour
                 continue;
             }
 
+            // Check mine detonation
+            DisposableMine mine = target.GetComponent<DisposableMine>();
+            if (mine != null && !mine.IsDetonated)
+            {
+                mine.Detonate();
+                continue;
+            }
+
             // Check asteroid
             Rock rock = target.GetComponent<Rock>();
             if (rock != null)
@@ -411,8 +555,8 @@ public class Player_controller : MonoBehaviour
         if (!showAmmoHUD) return;
 
         // Clean weapon & ammo HUD at bottom-left corner
-        float cardWidth = 240f;
-        float cardHeight = 96f;
+        float cardWidth = 280f;
+        float cardHeight = 118f;
         float x = 20f;
         float y = Screen.height - cardHeight - 20f;
 
@@ -425,31 +569,31 @@ public class Player_controller : MonoBehaviour
             alignment = TextAnchor.UpperLeft
         };
         titleStyle.normal.textColor = new Color(0.7f, 0.7f, 0.7f);
-        GUI.Label(new Rect(x + 12, y + 6, cardWidth - 24, 16), "UNIFIED WEAPON ARSENAL", titleStyle);
+        GUI.Label(new Rect(x + 12, y + 6, cardWidth - 24, 16), "WEAPON ARSENAL & RESOURCES", titleStyle);
 
         // Unified Resources Pool Display
+        bool isOverload = ComboManager.Instance != null && ComboManager.Instance.IsOverloadActive;
         GUIStyle resStyle = new GUIStyle(GUI.skin.label)
         {
             fontSize = 14,
             fontStyle = FontStyle.Bold,
             alignment = TextAnchor.MiddleLeft
         };
-        resStyle.normal.textColor = new Color(0.3f, 1f, 0.5f);
-        GUI.Label(new Rect(x + 12, y + 24, cardWidth - 24, 20), $"RESOURCES: {resources}", resStyle);
+        resStyle.normal.textColor = isOverload ? new Color(1f, 0.85f, 0.1f) : new Color(0.3f, 1f, 0.5f);
+        string resText = isOverload ? "RESOURCES: FREE FIRING (OVERLOAD!)" : $"RESOURCES: {resources}";
+        GUI.Label(new Rect(x + 12, y + 23, cardWidth - 24, 20), resText, resStyle);
 
-        bool isOverload = ComboManager.Instance != null && ComboManager.Instance.IsOverloadActive;
+        // Weapon Selection Slots Row: [1] Laser  [2] Railgun  [3] Mine
+        float slotW = (cardWidth - 24f) / 3f;
+        float slotY = y + 46f;
+        float slotH = 38f;
 
-        GUIStyle primaryStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 12,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleLeft
-        };
-        primaryStyle.normal.textColor = isOverload ? new Color(1f, 0.85f, 0.2f) : (CanAfford(laserCannonCost) ? new Color(0.2f, 0.85f, 1f) : Color.red);
-        string primaryCostText = isOverload ? "Laser Cannon (LMB): FREE!" : $"Laser Cannon (LMB): {laserCannonCost} Res";
-        GUI.Label(new Rect(x + 12, y + 46, cardWidth - 24, 20), primaryCostText, primaryStyle);
+        DrawWeaponSlot(new Rect(x + 12f, slotY, slotW - 3f, slotH), WeaponType.LaserCannon, "1. LASER", isOverload ? "FREE" : $"{laserCannonCost} Res");
+        DrawWeaponSlot(new Rect(x + 12f + slotW, slotY, slotW - 3f, slotH), WeaponType.Railgun, "2. RAILGUN", isOverload ? "FREE" : $"{railgunCost} Res");
+        DrawWeaponSlot(new Rect(x + 12f + slotW * 2f, slotY, slotW - 3f, slotH), WeaponType.DisposableMine, "3. MINE", isOverload ? "FREE" : $"{disposableMineCost} Res");
 
-        // Secondary / Lightning indicator & cooldown
+        // Secondary / Lightning indicator & cooldown at bottom
+        float secY = y + 89f;
         GUIStyle cdStyle = new GUIStyle(GUI.skin.label)
         {
             fontSize = 11,
@@ -460,11 +604,11 @@ public class Player_controller : MonoBehaviour
         if (lightningCooldownTimer > 0f)
         {
             cdStyle.normal.textColor = new Color(1f, 0.45f, 0.2f);
-            GUI.Label(new Rect(x + 12, y + 68, 120f, 18), $"RECHARGE: {lightningCooldownTimer:F1}s", cdStyle);
+            GUI.Label(new Rect(x + 12, secY, 130f, 18), $"RMB: {lightningCooldownTimer:F1}s", cdStyle);
 
-            float barX = x + 130f;
-            float barY = y + 73f;
-            float barW = cardWidth - 142f;
+            float barX = x + 145f;
+            float barY = secY + 5f;
+            float barW = cardWidth - 157f;
             float barH = 8f;
             GUI.Box(new Rect(barX, barY, barW, barH), GUIContent.none);
             float progress = 1f - Mathf.Clamp01(lightningCooldownTimer / lightningCooldown);
@@ -480,8 +624,42 @@ public class Player_controller : MonoBehaviour
         {
             bool canAffordSec = CanAfford(lightningUsesAmmo ? lightningResourceCost : 0);
             cdStyle.normal.textColor = canAffordSec ? (isOverload ? new Color(1f, 0.85f, 0.2f) : new Color(0.3f, 1f, 0.4f)) : Color.gray;
-            string readyText = canAffordSec ? (isOverload ? "Lightning (RMB): [READY - FREE]" : $"Lightning (RMB): [READY - {lightningResourceCost} Res]") : "[OUT OF RESOURCES]";
-            GUI.Label(new Rect(x + 12, y + 68, cardWidth - 24, 18), readyText, cdStyle);
+            string readyText = canAffordSec ? (isOverload ? "RMB: [READY - FREE]" : $"RMB Lightning: [READY - {lightningResourceCost} Res]") : "[OUT OF RESOURCES]";
+            GUI.Label(new Rect(x + 12, secY, cardWidth - 24, 18), readyText, cdStyle);
         }
+    }
+
+    private void DrawWeaponSlot(Rect r, WeaponType type, string slotName, string cost)
+    {
+        bool isSelected = currentWeapon == type;
+        Color prev = GUI.color;
+
+        if (isSelected)
+        {
+            GUI.color = new Color(0.2f, 0.7f, 1f, 0.35f);
+            GUI.DrawTexture(r, Texture2D.whiteTexture);
+        }
+
+        GUI.color = isSelected ? Color.cyan : new Color(0.45f, 0.45f, 0.45f, 0.7f);
+        GUI.Box(r, GUIContent.none);
+
+        GUIStyle nameStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 10,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter
+        };
+        nameStyle.normal.textColor = isSelected ? Color.white : new Color(0.7f, 0.7f, 0.7f);
+        GUI.Label(new Rect(r.x, r.y + 2f, r.width, 16f), slotName, nameStyle);
+
+        GUIStyle costStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 9,
+            alignment = TextAnchor.MiddleCenter
+        };
+        costStyle.normal.textColor = isSelected ? new Color(1f, 0.9f, 0.3f) : new Color(0.55f, 0.55f, 0.55f);
+        GUI.Label(new Rect(r.x, r.y + 18f, r.width, 16f), cost, costStyle);
+
+        GUI.color = prev;
     }
 }
