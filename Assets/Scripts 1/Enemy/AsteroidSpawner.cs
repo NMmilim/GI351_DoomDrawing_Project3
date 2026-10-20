@@ -46,11 +46,33 @@ public class AsteroidSpawner : MonoBehaviour
         public string typeName = "Normal";
         public MeteorType type = MeteorType.Normal;
 
-        [Header("Prefab & Sprites")]
-        [Tooltip("Specific prefab for this meteor type. If assigned, this prefab is instantiated. If null, falls back to generic asteroid prefabs.")]
+        [Header("Prefab & Variants")]
+        [Tooltip("Specific single prefab for this meteor type. Used if variantPrefabs is empty.")]
         public GameObject prefab;
+        [Tooltip("Multiple variant prefabs for this type (e.g. Normal Variant 1, 2, 3). If populated, one is randomly chosen each time this type spawns.")]
+        public GameObject[] variantPrefabs;
         [Tooltip("Custom sprite(s) for this meteor type (e.g. from Assets/Meteor). If assigned, randomly applied to SpriteRenderer.")]
         public Sprite[] sprites;
+
+        /// <summary>
+        /// Returns a randomly chosen variant prefab if any are assigned, otherwise returns the primary prefab.
+        /// </summary>
+        public GameObject GetSpawnPrefab()
+        {
+            if (variantPrefabs != null && variantPrefabs.Length > 0)
+            {
+                List<GameObject> valid = new List<GameObject>();
+                for (int i = 0; i < variantPrefabs.Length; i++)
+                {
+                    if (variantPrefabs[i] != null) valid.Add(variantPrefabs[i]);
+                }
+                if (valid.Count > 0)
+                {
+                    return valid[UnityEngine.Random.Range(0, valid.Count)];
+                }
+            }
+            return prefab;
+        }
 
         [Header("Spawn Probability Weight")]
         [Tooltip("Relative probability weight of this meteor type spawning in chunks.")]
@@ -149,16 +171,9 @@ public class AsteroidSpawner : MonoBehaviour
         vortexPullForce = 22f
     };
 
-    [Header("Fallback Prefabs (Used if specific type prefab is null)")]
-    [Tooltip("Weak asteroid prefab (destroyed in 1 hit).")]
-    [SerializeField] private GameObject weakAsteroidPrefab;
-    [Tooltip("Chance weighting for Weak asteroid (default 70%).")]
-    [Range(0, 100)] [SerializeField] private int weakWeight = 70;
-
-    [Tooltip("Medium asteroid prefab (takes multiple hits).")]
-    [SerializeField] private GameObject mediumAsteroidPrefab;
-    [Tooltip("Chance weighting for Medium asteroid (default 30%).")]
-    [Range(0, 100)] [SerializeField] private int mediumWeight = 30;
+    [Header("Fallback Asteroid Prefab (Optional)")]
+    [Tooltip("General fallback prefab used if a specific meteor type does not have a prefab assigned. If left empty, it automatically falls back to the Normal meteor prefab.")]
+    [SerializeField] private GameObject fallbackAsteroidPrefab;
 
     [Header("Wave Progression")]
     [Tooltip("Current wave number.")]
@@ -229,10 +244,10 @@ public class AsteroidSpawner : MonoBehaviour
 
     private void Start()
     {
-        if (weakAsteroidPrefab == null)
-            weakAsteroidPrefab = Resources.Load<GameObject>("Rock2");
-        if (mediumAsteroidPrefab == null)
-            mediumAsteroidPrefab = Resources.Load<GameObject>("Rock1");
+        if (fallbackAsteroidPrefab == null)
+        {
+            fallbackAsteroidPrefab = normalMeteor.GetSpawnPrefab();
+        }
 
         // Start countdown to Wave 1 with threat direction indicator
         StartIntermission(timeBetweenWaves);
@@ -330,9 +345,11 @@ public class AsteroidSpawner : MonoBehaviour
         for (int i = 0; i < chunkSize; i++)
         {
             MeteorTypeConfig config = RollMeteorConfig();
-            GameObject prefabToSpawn = (config != null && config.prefab != null)
-                ? config.prefab
-                : PickAsteroidPrefab();
+            GameObject prefabToSpawn = (config != null) ? config.GetSpawnPrefab() : null;
+            if (prefabToSpawn == null)
+            {
+                prefabToSpawn = fallbackAsteroidPrefab != null ? fallbackAsteroidPrefab : normalMeteor.GetSpawnPrefab();
+            }
 
             if (prefabToSpawn == null)
             {
@@ -498,21 +515,6 @@ public class AsteroidSpawner : MonoBehaviour
         return candidatePos;
     }
 
-    private GameObject PickAsteroidPrefab()
-    {
-        int totalWeight = weakWeight + mediumWeight;
-        if (totalWeight <= 0) return weakAsteroidPrefab;
-
-        int roll = UnityEngine.Random.Range(0, totalWeight);
-        if (roll < weakWeight)
-        {
-            return weakAsteroidPrefab != null ? weakAsteroidPrefab : mediumAsteroidPrefab;
-        }
-        else
-        {
-            return mediumAsteroidPrefab != null ? mediumAsteroidPrefab : weakAsteroidPrefab;
-        }
-    }
 
     public MeteorTypeConfig RollMeteorConfig()
     {
