@@ -40,7 +40,116 @@ public class AsteroidSpawner : MonoBehaviour
     [Tooltip("Optional custom prefab for direction indicator. If null, a glowing procedural warning chevron is created.")]
     [SerializeField] private GameObject customIndicatorPrefab;
 
-    [Header("Asteroid Prefabs & Weighted Mix")]
+    [System.Serializable]
+    public class MeteorTypeConfig
+    {
+        public string typeName = "Normal";
+        public MeteorType type = MeteorType.Normal;
+
+        [Header("Prefab & Sprites")]
+        [Tooltip("Specific prefab for this meteor type. If assigned, this prefab is instantiated. If null, falls back to generic asteroid prefabs.")]
+        public GameObject prefab;
+        [Tooltip("Custom sprite(s) for this meteor type (e.g. from Assets/Meteor). If assigned, randomly applied to SpriteRenderer.")]
+        public Sprite[] sprites;
+
+        [Header("Spawn Probability Weight")]
+        [Tooltip("Relative probability weight of this meteor type spawning in chunks.")]
+        [Range(0, 100)] public int spawnWeight = 50;
+
+        [Header("Status & Attributes (Inspector Editable)")]
+        [Tooltip("Maximum Hit Points.")]
+        public int maxHp = 1;
+
+        [Tooltip("Initial inward movement speed toward Earth.")]
+        public float initialSpeed = 1.5f;
+
+        [Tooltip("Maximum fall velocity toward Earth.")]
+        public float terminalVelocity = 7.0f;
+
+        [Tooltip("Scale multiplier for body size.")]
+        public float sizeScale = 1.0f;
+
+        [Tooltip("Blast radius multiplier relative to body size (or vortex radius for Magnet).")]
+        public float blastRadiusMultiplier = 2.5f;
+
+        [Tooltip("Immune to standard Laser Cannon. Must be destroyed by explosions or Railgun.")]
+        public bool immuneToNormalFire = false;
+
+        [Header("Chain Economy")]
+        [Tooltip("Flat base resources earned on 1st destruction.")]
+        public int baseResourceDrop = 7;
+
+        [Tooltip("Base chain cost added in subsequent chain combo destructions.")]
+        public int baseChainCost = 5;
+
+        [Header("Special Ability (Magnet)")]
+        [Tooltip("Inward gravitational pull force for Magnet meteor implosion vortex.")]
+        public float vortexPullForce = 22f;
+    }
+
+    [Header("Meteor Type Status & Prefabs (Inspector Editable)")]
+    [SerializeField] private MeteorTypeConfig normalMeteor = new MeteorTypeConfig
+    {
+        typeName = "Normal",
+        type = MeteorType.Normal,
+        spawnWeight = 50,
+        maxHp = 1,
+        initialSpeed = 1.5f,
+        terminalVelocity = 7.0f,
+        sizeScale = 1.0f,
+        blastRadiusMultiplier = 2.5f,
+        immuneToNormalFire = false,
+        baseResourceDrop = 7,
+        baseChainCost = 5
+    };
+
+    [SerializeField] private MeteorTypeConfig speedyMeteor = new MeteorTypeConfig
+    {
+        typeName = "Speedy",
+        type = MeteorType.Speedy,
+        spawnWeight = 25,
+        maxHp = 1,
+        initialSpeed = 2.4f,
+        terminalVelocity = 10.0f,
+        sizeScale = 0.7f,
+        blastRadiusMultiplier = 1.5f,
+        immuneToNormalFire = false,
+        baseResourceDrop = 3,
+        baseChainCost = 10
+    };
+
+    [SerializeField] private MeteorTypeConfig tankyMeteor = new MeteorTypeConfig
+    {
+        typeName = "Tanky",
+        type = MeteorType.Tanky,
+        spawnWeight = 15,
+        maxHp = 3,
+        initialSpeed = 1.2f,
+        terminalVelocity = 4.5f,
+        sizeScale = 1.5f,
+        blastRadiusMultiplier = 1.5f,
+        immuneToNormalFire = true,
+        baseResourceDrop = 5,
+        baseChainCost = 7
+    };
+
+    [SerializeField] private MeteorTypeConfig magnetMeteor = new MeteorTypeConfig
+    {
+        typeName = "Magnet",
+        type = MeteorType.Magnet,
+        spawnWeight = 10,
+        maxHp = 2,
+        initialSpeed = 1.3f,
+        terminalVelocity = 5.0f,
+        sizeScale = 1.0f,
+        blastRadiusMultiplier = 5.0f,
+        immuneToNormalFire = true,
+        baseResourceDrop = 8,
+        baseChainCost = 15,
+        vortexPullForce = 22f
+    };
+
+    [Header("Fallback Prefabs (Used if specific type prefab is null)")]
     [Tooltip("Weak asteroid prefab (destroyed in 1 hit).")]
     [SerializeField] private GameObject weakAsteroidPrefab;
     [Tooltip("Chance weighting for Weak asteroid (default 70%).")]
@@ -50,16 +159,6 @@ public class AsteroidSpawner : MonoBehaviour
     [SerializeField] private GameObject mediumAsteroidPrefab;
     [Tooltip("Chance weighting for Medium asteroid (default 30%).")]
     [Range(0, 100)] [SerializeField] private int mediumWeight = 30;
-
-    [Header("Meteor Type Spawn Weights (Normal, Speedy, Tanky, Magnet)")]
-    [Tooltip("Weight for Normal meteors (medium size, 2.5x blast).")]
-    [SerializeField] private int normalWeight = 50;
-    [Tooltip("Weight for Speedy meteors (fast, small, 1.5x blast).")]
-    [SerializeField] private int speedyWeight = 25;
-    [Tooltip("Weight for Tanky meteors (slow, large, immune to normal fire).")]
-    [SerializeField] private int tankyWeight = 15;
-    [Tooltip("Weight for Magnet meteors (slow, immune to normal fire, vortex pull).")]
-    [SerializeField] private int magnetWeight = 10;
 
     [Header("Wave Progression")]
     [Tooltip("Current wave number.")]
@@ -106,6 +205,16 @@ public class AsteroidSpawner : MonoBehaviour
     public SpawnerState CurrentState => currentState;
     public int ActiveAsteroidCount => activeAsteroids.Count;
     public float NextSpawnAngle => nextSpawnAngle;
+
+    public MeteorTypeConfig NormalConfig => normalMeteor;
+    public MeteorTypeConfig SpeedyConfig => speedyMeteor;
+    public MeteorTypeConfig TankyConfig => tankyMeteor;
+    public MeteorTypeConfig MagnetConfig => magnetMeteor;
+
+    public int NormalWeight => normalMeteor != null ? normalMeteor.spawnWeight : 50;
+    public int SpeedyWeight => speedyMeteor != null ? speedyMeteor.spawnWeight : 25;
+    public int TankyWeight => tankyMeteor != null ? tankyMeteor.spawnWeight : 15;
+    public int MagnetWeight => magnetMeteor != null ? magnetMeteor.spawnWeight : 10;
 
     private void Awake()
     {
@@ -220,7 +329,11 @@ public class AsteroidSpawner : MonoBehaviour
 
         for (int i = 0; i < chunkSize; i++)
         {
-            GameObject prefabToSpawn = PickAsteroidPrefab();
+            MeteorTypeConfig config = RollMeteorConfig();
+            GameObject prefabToSpawn = (config != null && config.prefab != null)
+                ? config.prefab
+                : PickAsteroidPrefab();
+
             if (prefabToSpawn == null)
             {
                 Debug.LogWarning("[Spawner] No asteroid prefab assigned to spawn!");
@@ -230,13 +343,18 @@ public class AsteroidSpawner : MonoBehaviour
             Vector3 spawnPos = CalculateChunkPosition(i, chunkSize, chunkCenterAngle, baseRadius, center, placedPositions);
             placedPositions.Add(spawnPos);
 
-            MeteorType rolledType = RollMeteorType();
             GameObject asteroid = Instantiate(prefabToSpawn, spawnPos, Quaternion.identity);
             Rock rock = asteroid.GetComponent<Rock>();
             if (rock != null)
             {
-                rock.meteorType = rolledType;
-                rock.ApplyMeteorTypeConfiguration();
+                if (config != null)
+                {
+                    rock.ApplyConfig(config);
+                }
+                else
+                {
+                    rock.ApplyMeteorTypeConfiguration();
+                }
             }
             activeAsteroids.Add(asteroid);
         }
@@ -396,18 +514,29 @@ public class AsteroidSpawner : MonoBehaviour
         }
     }
 
-    private MeteorType RollMeteorType()
+    public MeteorTypeConfig RollMeteorConfig()
     {
-        int totalWeight = normalWeight + speedyWeight + tankyWeight + magnetWeight;
-        if (totalWeight <= 0) return MeteorType.Normal;
+        int wNormal = Mathf.Max(0, normalMeteor != null ? normalMeteor.spawnWeight : 50);
+        int wSpeedy = Mathf.Max(0, speedyMeteor != null ? speedyMeteor.spawnWeight : 25);
+        int wTanky = Mathf.Max(0, tankyMeteor != null ? tankyMeteor.spawnWeight : 15);
+        int wMagnet = Mathf.Max(0, magnetMeteor != null ? magnetMeteor.spawnWeight : 10);
+
+        int totalWeight = wNormal + wSpeedy + wTanky + wMagnet;
+        if (totalWeight <= 0) return normalMeteor;
 
         int roll = UnityEngine.Random.Range(0, totalWeight);
-        if (roll < normalWeight) return MeteorType.Normal;
-        roll -= normalWeight;
-        if (roll < speedyWeight) return MeteorType.Speedy;
-        roll -= speedyWeight;
-        if (roll < tankyWeight) return MeteorType.Tanky;
-        return MeteorType.Magnet;
+        if (roll < wNormal) return normalMeteor;
+        roll -= wNormal;
+        if (roll < wSpeedy) return speedyMeteor;
+        roll -= wSpeedy;
+        if (roll < wTanky) return tankyMeteor;
+        return magnetMeteor;
+    }
+
+    public MeteorType RollMeteorType()
+    {
+        MeteorTypeConfig cfg = RollMeteorConfig();
+        return cfg != null ? cfg.type : MeteorType.Normal;
     }
 
     private void StartIntermission(float duration)

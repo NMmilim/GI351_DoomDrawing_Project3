@@ -14,18 +14,22 @@ public class Rock : MonoBehaviour
 {
     [Header("Meteor Type & Specifications")]
     public MeteorType meteorType = MeteorType.Normal;
-    [Tooltip("If true, automatically adjusts size, health, speed, and drop parameters based on meteorType on Start.")]
+    [Tooltip("If true, retains the custom inspector values on this component/prefab instead of overwriting them with default presets.")]
+    public bool useCustomStats = false;
+    [Tooltip("If true, automatically adjusts size, health, speed, and drop parameters based on meteorType on Start (only if useCustomStats is false).")]
     [SerializeField] private bool autoConfigureStatsFromType = true;
+
+    [Header("Combat & Vulnerability (Inspector Editable)")]
     [Tooltip("Immune to standard Laser Cannon fire. Can only be destroyed by explosions or piercing weapons.")]
     public bool immuneToNormalFire = false;
     [Tooltip("Flat base resources earned on 1st destruction.")]
-    [SerializeField] private int baseResourceDrop = 7;
+    public int baseResourceDrop = 7;
     [Tooltip("Base chain cost added in subsequent chain combo destructions.")]
-    [SerializeField] private int baseChainCost = 5;
+    public int baseChainCost = 5;
     [Tooltip("Multiplier for blast radius or vortex radius relative to body size.")]
-    [SerializeField] private float blastRadiusMultiplier = 2.5f;
+    public float blastRadiusMultiplier = 2.5f;
     [Tooltip("Inward gravitational pull impulse for Magnet meteor vortex.")]
-    [SerializeField] private float vortexPullForce = 22f;
+    public float vortexPullForce = 22f;
 
     [Header("Enemy Collision & Health")]
     [SerializeField] private string enemy_tag = "Enemy";
@@ -33,6 +37,10 @@ public class Rock : MonoBehaviour
     public int damage = 1;
     public int hp = 1;
     public int maxhp = 1;
+
+    [Header("Visual Sprites & Variants")]
+    [Tooltip("Optional custom sprites for this meteor prefab. If assigned, one is randomly selected on start.")]
+    [SerializeField] private Sprite[] customSprites;
 
     [Header("Earth & Gravity Pull System")]
     [Tooltip("Reference to Earth. If empty, automatically finds a GameObject named 'Earth' or defaults to (0,0).")]
@@ -46,11 +54,11 @@ public class Rock : MonoBehaviour
     [Tooltip("Distance threshold to prevent excessive gravity force right at Earth's center.")]
     [SerializeField] private float minGravityDistance = 1.5f;
     [Tooltip("Maximum fall speed toward Earth.")]
-    [SerializeField] private float terminalVelocity = 7f;
+    public float terminalVelocity = 7f;
 
     [Header("Movement & Tumble")]
     [Tooltip("Initial inward push speed toward Earth when the rock spawns.")]
-    [SerializeField] private float initialInwardSpeed = 1.5f;
+    public float initialInwardSpeed = 1.5f;
     [Tooltip("Random initial rotational tumble speed in degrees per second.")]
     [SerializeField] private float randomTumbleSpeed = 35f;
     [Tooltip("Damping on sideways (tangential) velocity over time so knocked asteroids always fall back toward Earth.")]
@@ -81,6 +89,7 @@ public class Rock : MonoBehaviour
     private Rigidbody2D rb;
     private bool isDead = false;
     private float spawnTime = 0f;
+    private bool hasAppliedConfig = false;
     private static readonly Collider2D[] nearbyColliders = new Collider2D[16];
 
     public float EffectiveRadius => blastRadiusMultiplier * Mathf.Max(0.5f, transform.localScale.x);
@@ -92,13 +101,28 @@ public class Rock : MonoBehaviour
 
     private void Start()
     {
-        if (autoConfigureStatsFromType)
+        if (!hasAppliedConfig && autoConfigureStatsFromType && !useCustomStats)
         {
             ApplyMeteorTypeConfiguration();
         }
 
-        hp = maxhp;
+        if (hp <= 0 || (!hasAppliedConfig && !useCustomStats))
+        {
+            hp = maxhp;
+        }
+
         spawnTime = Time.time;
+
+        // Apply custom sprite if assigned on this prefab
+        if (customSprites != null && customSprites.Length > 0)
+        {
+            Sprite chosen = customSprites[Random.Range(0, customSprites.Length)];
+            if (chosen != null)
+            {
+                SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
+                if (sr != null) sr.sprite = chosen;
+            }
+        }
 
         if (earthTransform == null)
         {
@@ -123,10 +147,58 @@ public class Rock : MonoBehaviour
     }
 
     /// <summary>
-    /// Configures meteor traits, scaling, health, and drop parameters based on MeteorType.
+    /// Applies status configuration passed from AsteroidSpawner.
+    /// If useCustomStats is checked on this instance or prefab, its local inspector stats are preserved.
+    /// </summary>
+    public void ApplyConfig(AsteroidSpawner.MeteorTypeConfig config)
+    {
+        hasAppliedConfig = true;
+        if (config == null) return;
+        meteorType = config.type;
+
+        if (!useCustomStats)
+        {
+            maxhp = config.maxHp;
+            hp = maxhp;
+            initialInwardSpeed = config.initialSpeed;
+            terminalVelocity = config.terminalVelocity;
+            transform.localScale = Vector3.one * config.sizeScale;
+            blastRadiusMultiplier = config.blastRadiusMultiplier;
+            immuneToNormalFire = config.immuneToNormalFire;
+            baseResourceDrop = config.baseResourceDrop;
+            baseChainCost = config.baseChainCost;
+            vortexPullForce = config.vortexPullForce;
+        }
+
+        // Pick and apply sprite from spawner config or rock's customSprites
+        Sprite chosenSprite = null;
+        if (config.sprites != null && config.sprites.Length > 0)
+        {
+            chosenSprite = config.sprites[Random.Range(0, config.sprites.Length)];
+        }
+        else if (customSprites != null && customSprites.Length > 0)
+        {
+            chosenSprite = customSprites[Random.Range(0, customSprites.Length)];
+        }
+
+        if (chosenSprite != null)
+        {
+            SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
+            if (sr != null)
+            {
+                sr.sprite = chosenSprite;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Configures default meteor traits, scaling, health, and drop parameters based on MeteorType.
+    /// Ignored if useCustomStats is enabled.
     /// </summary>
     public void ApplyMeteorTypeConfiguration()
     {
+        if (useCustomStats) return;
+
         switch (meteorType)
         {
             case MeteorType.Normal:
@@ -135,6 +207,8 @@ public class Rock : MonoBehaviour
                 blastRadiusMultiplier = 2.5f;
                 immuneToNormalFire = false;
                 maxhp = 1;
+                initialInwardSpeed = 1.5f;
+                terminalVelocity = 7.0f;
                 transform.localScale = Vector3.one * 1.0f;
                 break;
 
@@ -156,6 +230,7 @@ public class Rock : MonoBehaviour
                 immuneToNormalFire = true; // Immune to normal Laser Cannon
                 maxhp = 3;
                 terminalVelocity = 4.5f;
+                initialInwardSpeed = 1.2f;
                 transform.localScale = Vector3.one * 1.5f;
                 break;
 
@@ -163,12 +238,21 @@ public class Rock : MonoBehaviour
                 baseResourceDrop = 8;
                 baseChainCost = 15;
                 blastRadiusMultiplier = 5.0f; // Vortex radius
+                vortexPullForce = 22f;
                 immuneToNormalFire = true; // Immune to normal Laser Cannon
                 maxhp = 2;
                 terminalVelocity = 5.0f;
+                initialInwardSpeed = 1.3f;
                 transform.localScale = Vector3.one * 1.0f;
                 break;
         }
+    }
+
+    [ContextMenu("Reset to Preset Defaults for MeteorType")]
+    private void ContextMenuLoadDefaults()
+    {
+        useCustomStats = false;
+        ApplyMeteorTypeConfiguration();
     }
 
     private void FixedUpdate()
