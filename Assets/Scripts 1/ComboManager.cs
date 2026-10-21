@@ -73,6 +73,25 @@ public class ComboManager : MonoBehaviour
     [SerializeField] private int totalResourcesEarned = 0;
     [SerializeField] private bool isGameOver = false;
 
+    [Header("Game Statistics & Records")]
+    [SerializeField] private int currentScore = 0;
+    [SerializeField] private int highScore = 0;
+    [SerializeField] private int waveReached = 1;
+    [SerializeField] private int wavesCleared = 0;
+    [SerializeField] private int bestWave = 1;
+    [SerializeField] private int totalAsteroidsDestroyed = 0;
+    [SerializeField] private int normalDestroyed = 0;
+    [SerializeField] private int speedyDestroyed = 0;
+    [SerializeField] private int tankyDestroyed = 0;
+    [SerializeField] private int magnetDestroyed = 0;
+    [SerializeField] private int maxComboHits = 0;
+    [SerializeField] private ComboGrade highestGrade = ComboGrade.None;
+    [SerializeField] private float survivalDuration = 0f;
+    [SerializeField] private int overloadActivations = 0;
+    [SerializeField] private string gameOverCause = "Earth Defenses Breached";
+    [SerializeField] private bool isNewHighScore = false;
+    [SerializeField] private bool isNewBestWave = false;
+
     [Header("On-Screen Display")]
     [Tooltip("Render sleek combo, overload, and game-over UI on screen.")]
     [SerializeField] private bool showOnScreenUI = true;
@@ -100,6 +119,24 @@ public class ComboManager : MonoBehaviour
     public int TotalResourcesEarned => totalResourcesEarned;
     public bool IsGameOver => isGameOver;
 
+    public int CurrentScore => currentScore;
+    public int HighScore => highScore;
+    public int WaveReached => waveReached;
+    public int WavesCleared => wavesCleared;
+    public int BestWave => bestWave;
+    public int TotalAsteroidsDestroyed => totalAsteroidsDestroyed;
+    public int NormalDestroyed => normalDestroyed;
+    public int SpeedyDestroyed => speedyDestroyed;
+    public int TankyDestroyed => tankyDestroyed;
+    public int MagnetDestroyed => magnetDestroyed;
+    public int MaxComboHits => maxComboHits;
+    public ComboGrade HighestGrade => highestGrade;
+    public float SurvivalDuration => survivalDuration;
+    public int OverloadActivations => overloadActivations;
+    public string GameOverCause => gameOverCause;
+    public bool IsNewHighScore => isNewHighScore;
+    public bool IsNewBestWave => isNewBestWave;
+
     private void Awake()
     {
         if (_instance == null)
@@ -109,20 +146,56 @@ public class ComboManager : MonoBehaviour
         else if (_instance != this)
         {
             Destroy(gameObject);
+            return;
         }
+
+        highScore = PlayerPrefs.GetInt("DoomDefense_HighScore", 0);
+        bestWave = PlayerPrefs.GetInt("DoomDefense_BestWave", 1);
+    }
+
+    private void OnEnable()
+    {
+        AsteroidSpawner.OnWaveCleared += HandleWaveCleared;
+    }
+
+    private void OnDisable()
+    {
+        AsteroidSpawner.OnWaveCleared -= HandleWaveCleared;
+    }
+
+    private void HandleWaveCleared(int wave)
+    {
+        wavesCleared = Mathf.Max(wavesCleared, wave);
+        int waveBonus = wave * 500;
+        currentScore += waveBonus;
+        Debug.Log($"[Score] Wave {wave} Cleared! +{waveBonus} Bonus Points. Total Score: {currentScore}");
     }
 
     private void Update()
     {
-        // Handle Game Over restart hotkey
+        // Handle Game Over navigation hotkeys
         if (isGameOver)
         {
-            if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+            if (Keyboard.current != null)
             {
-                RestartGame();
+                if (Keyboard.current.rKey.wasPressedThisFrame)
+                {
+                    RestartGame();
+                }
+                else if (Keyboard.current.mKey.wasPressedThisFrame)
+                {
+                    ReturnToMainMenu();
+                }
+                else if (Keyboard.current.escapeKey.wasPressedThisFrame)
+                {
+                    Application.Quit();
+                }
             }
             return;
         }
+
+        // Track elapsed defense survival time
+        survivalDuration += Time.unscaledDeltaTime;
 
         // Handle Overload activation hotkey (Spacebar or Shift)
         if (isOverloadReady && !isOverloadActive)
@@ -169,10 +242,31 @@ public class ComboManager : MonoBehaviour
     /// Registers an enemy meteor kill, computing resources according to the Chain Combo formula:
     /// - 1st kill: grants flat Base Drop.
     /// - Subsequent kills: grants BaseChainCost + floor(CurrentCombo / 2).
+    /// Also records destruction statistics, applies combo score multiplier, and updates high scores.
     /// </summary>
     public void RegisterMeteorKill(MeteorType meteorType, int baseDrop, int baseChainCost)
     {
         if (isGameOver) return;
+
+        // Track asteroid kill statistics
+        totalAsteroidsDestroyed++;
+        switch (meteorType)
+        {
+            case MeteorType.Normal: normalDestroyed++; break;
+            case MeteorType.Speedy: speedyDestroyed++; break;
+            case MeteorType.Tanky: tankyDestroyed++; break;
+            case MeteorType.Magnet: magnetDestroyed++; break;
+        }
+
+        // Calculate score with combo streak multiplier
+        int baseThreatScore = 100;
+        switch (meteorType)
+        {
+            case MeteorType.Normal: baseThreatScore = 100; break;
+            case MeteorType.Speedy: baseThreatScore = 150; break;
+            case MeteorType.Tanky: baseThreatScore = 250; break;
+            case MeteorType.Magnet: baseThreatScore = 350; break;
+        }
 
         int earned = 0;
 
@@ -187,12 +281,13 @@ public class ComboManager : MonoBehaviour
             earned = baseDrop;
             remainingTime = GetActiveTimeout();
 
+            currentScore += baseThreatScore;
+
             Debug.Log($"[Combo] Chain started with {meteorType}! Kill 1 -> Earned {earned} base resources. Timer: {remainingTime:F1}s");
         }
         else
         {
             // Subsequent kills in chain: BaseChainCost + floor(currentCombo / 2)
-            // (e.g. Kill 2 has comboIndex 1 -> floor(1/2) = 0)
             int comboIndex = totalComboHits;
             int chainBonus = comboIndex / 2;
             earned = baseChainCost + chainBonus;
@@ -203,7 +298,21 @@ public class ComboManager : MonoBehaviour
 
             CheckGradeProgression();
 
+            float comboMultiplier = 1.0f + (totalComboHits * 0.05f);
+            int pts = Mathf.RoundToInt(baseThreatScore * comboMultiplier);
+            currentScore += pts;
+
             Debug.Log($"[Combo] Chain Kill #{totalComboHits} ({meteorType})! Combo {comboIndex} -> Earned {earned} resources ({baseChainCost} + {chainBonus}). Timer: {remainingTime:F1}s");
+        }
+
+        // Update peak combo and highest grade reached
+        if (totalComboHits > maxComboHits)
+        {
+            maxComboHits = totalComboHits;
+        }
+        if ((int)currentGrade > (int)highestGrade)
+        {
+            highestGrade = currentGrade;
         }
 
         totalResourcesEarned += earned;
@@ -255,6 +364,15 @@ public class ComboManager : MonoBehaviour
 
         CheckGradeProgression();
 
+        if (totalComboHits > maxComboHits)
+        {
+            maxComboHits = totalComboHits;
+        }
+        if ((int)currentGrade > (int)highestGrade)
+        {
+            highestGrade = currentGrade;
+        }
+
         if (!isOverloadActive && !isOverloadReady && totalComboHits >= overloadThreshold)
         {
             isOverloadReady = true;
@@ -271,6 +389,7 @@ public class ComboManager : MonoBehaviour
         isOverloadReady = false;
         isOverloadActive = true;
         overloadRemainingTime = overloadDuration;
+        overloadActivations++;
 
         Debug.Log($"[Overload] ACTIVATED! Unlimited free firing for {overloadDuration:F1}s!");
         OnOverloadActivated?.Invoke();
@@ -278,15 +397,47 @@ public class ComboManager : MonoBehaviour
 
     /// <summary>
     /// Triggered when asteroid impacts deplete Earth's resource pool to 0.
-    /// Freezes gameplay and shows Game Over banner.
+    /// Freezes gameplay, computes mission debrief records, saves high scores, and shows Game Over menu.
     /// </summary>
-    public void TriggerGameOver()
+    public void TriggerGameOver(string cause = "Planetary Defenses Breached")
     {
         if (isGameOver) return;
         isGameOver = true;
+        gameOverCause = string.IsNullOrEmpty(cause) ? "Earth Defenses Breached" : cause;
 
+        // Freeze gameplay
         Time.timeScale = 0f;
-        Debug.LogWarning("[Game Over] Earth defenses collapsed! Resource pool depleted to 0 from asteroid impacts. Final Hits: " + totalComboHits);
+
+        // Record wave stats
+        if (AsteroidSpawner.Instance != null)
+        {
+            waveReached = AsteroidSpawner.Instance.CurrentWave;
+            wavesCleared = Mathf.Max(0, waveReached - 1);
+        }
+        else
+        {
+            waveReached = Mathf.Max(1, wavesCleared + 1);
+        }
+
+        // Check and save High Score
+        if (currentScore > highScore)
+        {
+            isNewHighScore = true;
+            highScore = currentScore;
+            PlayerPrefs.SetInt("DoomDefense_HighScore", highScore);
+        }
+
+        // Check and save Best Wave
+        if (waveReached > bestWave)
+        {
+            isNewBestWave = true;
+            bestWave = waveReached;
+            PlayerPrefs.SetInt("DoomDefense_BestWave", bestWave);
+        }
+
+        PlayerPrefs.Save();
+
+        Debug.LogWarning($"[Game Over] {gameOverCause}! Final Score: {currentScore}, Wave: {waveReached}, Kills: {totalAsteroidsDestroyed}, Max Combo: {maxComboHits}");
         OnGameOver?.Invoke();
     }
 
@@ -294,6 +445,19 @@ public class ComboManager : MonoBehaviour
     {
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void ReturnToMainMenu()
+    {
+        Time.timeScale = 1f;
+        if (LevelManager.Instance != null)
+        {
+            LevelManager.Instance.LoadScene("GameMenu", "CrossFade");
+        }
+        else
+        {
+            SceneManager.LoadScene("GameMenu");
+        }
     }
 
     private void CheckGradeProgression()
@@ -378,14 +542,14 @@ public class ComboManager : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!showOnScreenUI) return;
-
-        // Render Game Over Screen Overlay
+        // Render Game Over Screen Overlay (ALWAYS render when game is over!)
         if (isGameOver)
         {
             DrawGameOverUI();
             return;
         }
+
+        if (!showOnScreenUI) return;
 
         // Render Combo & Overload HUD
         DrawComboAndOverloadUI();
@@ -488,52 +652,206 @@ public class ComboManager : MonoBehaviour
 
     private void DrawGameOverUI()
     {
-        // Darkened background overlay
+        // 1. Dark atmospheric backdrop overlay
         Color prevColor = GUI.color;
-        GUI.color = new Color(0f, 0f, 0f, 0.85f);
+        GUI.color = new Color(0.04f, 0.04f, 0.07f, 0.93f);
         GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
         GUI.color = prevColor;
 
-        float modalWidth = 420f;
-        float modalHeight = 220f;
+        // 2. Centered Modal Window
+        float modalWidth = Mathf.Min(600f, Screen.width - 40f);
+        float modalHeight = Mathf.Min(500f, Screen.height - 40f);
         float x = (Screen.width - modalWidth) * 0.5f;
         float y = (Screen.height - modalHeight) * 0.5f;
 
+        // Background card
         GUI.Box(new Rect(x, y, modalWidth, modalHeight), GUIContent.none);
 
+        // Header Title: "MISSION FAILED"
         GUIStyle titleStyle = new GUIStyle(GUI.skin.label)
         {
-            fontSize = 30,
+            fontSize = 28,
             fontStyle = FontStyle.Bold,
             alignment = TextAnchor.MiddleCenter
         };
         titleStyle.normal.textColor = new Color(1f, 0.25f, 0.25f);
-        GUI.Label(new Rect(x, y + 15, modalWidth, 40), "EARTH DESTROYED", titleStyle);
+        GUI.Label(new Rect(x, y + 14, modalWidth, 34), "MISSION FAILED", titleStyle);
 
-        GUIStyle descStyle = new GUIStyle(GUI.skin.label)
+        // Subtitle: "EARTH DEFENSES DESTROYED"
+        GUIStyle subTitleStyle = new GUIStyle(GUI.skin.label)
         {
-            fontSize = 14,
-            alignment = TextAnchor.MiddleCenter
-        };
-        descStyle.normal.textColor = new Color(0.9f, 0.9f, 0.9f);
-        GUI.Label(new Rect(x, y + 65, modalWidth, 24), "Earth Defenses Depleted: Resources reached 0 from asteroid impacts!", descStyle);
-
-        GUIStyle statStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 16,
+            fontSize = 13,
             fontStyle = FontStyle.Bold,
             alignment = TextAnchor.MiddleCenter
         };
-        statStyle.normal.textColor = new Color(1f, 0.85f, 0.2f);
-        GUI.Label(new Rect(x, y + 100, modalWidth, 26), $"Max Combo: {totalComboHits} Hits  |  Total Resources: {totalResourcesEarned}", statStyle);
+        subTitleStyle.normal.textColor = new Color(1f, 0.75f, 0.25f);
+        GUI.Label(new Rect(x, y + 46, modalWidth, 20), "EARTH DEFENSES COLLAPSED", subTitleStyle);
 
-        GUIStyle restartStyle = new GUIStyle(GUI.skin.label)
+        // Cause of defeat
+        GUIStyle causeStyle = new GUIStyle(GUI.skin.label)
         {
-            fontSize = 18,
-            fontStyle = FontStyle.Bold,
+            fontSize = 11,
             alignment = TextAnchor.MiddleCenter
         };
-        restartStyle.normal.textColor = new Color(0.3f, 1f, 0.5f);
-        GUI.Label(new Rect(x, y + 150, modalWidth, 30), "Press [R] to Try Again", restartStyle);
+        causeStyle.normal.textColor = new Color(0.85f, 0.85f, 0.85f);
+        string causeStr = !string.IsNullOrEmpty(gameOverCause) ? gameOverCause : "Resources drained to 0 from asteroid impacts";
+        GUI.Label(new Rect(x, y + 66, modalWidth, 18), $"Cause: {causeStr}", causeStyle);
+
+        // 3. Highlighted Score & High Score Banner
+        float scoreBoxY = y + 88f;
+        float scoreBoxH = 50f;
+        Rect scoreBoxRect = new Rect(x + 20f, scoreBoxY, modalWidth - 40f, scoreBoxH);
+        GUI.Box(scoreBoxRect, GUIContent.none);
+
+        GUIStyle scoreStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 20,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleLeft
+        };
+        scoreStyle.normal.textColor = new Color(1f, 0.88f, 0.25f);
+        GUI.Label(new Rect(x + 35f, scoreBoxY + 6f, 260f, 24), $"FINAL SCORE: {currentScore:N0}", scoreStyle);
+
+        GUIStyle highScoreStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 13,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleRight
+        };
+        highScoreStyle.normal.textColor = isNewHighScore ? new Color(0.3f, 1f, 0.5f) : new Color(0.8f, 0.85f, 0.9f);
+        string hsText = isNewHighScore ? "★ NEW BEST HIGH SCORE! ★" : $"ALL-TIME BEST: {highScore:N0}";
+        GUI.Label(new Rect(x + modalWidth - 300f, scoreBoxY + 8f, 265f, 20), hsText, highScoreStyle);
+
+        GUIStyle scoreSubStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 10,
+            alignment = TextAnchor.MiddleLeft
+        };
+        scoreSubStyle.normal.textColor = new Color(0.7f, 0.7f, 0.7f);
+        GUI.Label(new Rect(x + 35f, scoreBoxY + 28f, modalWidth - 70f, 16), "Earned from asteroid threat eliminations, combo multiplier chains, and cleared waves", scoreSubStyle);
+
+        // 4. Two-Column Detailed Mission Statistics
+        float colY = scoreBoxY + scoreBoxH + 10f;
+        float colW = (modalWidth - 50f) * 0.5f;
+        float colH = 205f;
+
+        // Left Column: Mission & Progression
+        Rect leftColRect = new Rect(x + 20f, colY, colW, colH);
+        GUI.Box(leftColRect, GUIContent.none);
+
+        GUIStyle colHeaderStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 12,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleLeft
+        };
+        colHeaderStyle.normal.textColor = new Color(0.35f, 0.85f, 1f);
+        GUI.Label(new Rect(leftColRect.x + 12f, colY + 8f, colW - 24f, 18), "MISSION PROGRESSION", colHeaderStyle);
+
+        GUIStyle statLabelStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, alignment = TextAnchor.MiddleLeft };
+        statLabelStyle.normal.textColor = new Color(0.85f, 0.85f, 0.85f);
+        GUIStyle statValStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleRight };
+        statValStyle.normal.textColor = Color.white;
+
+        float rowY = colY + 30f;
+        float rowH = 22f;
+
+        // Wave Reached
+        GUI.Label(new Rect(leftColRect.x + 12f, rowY, colW - 24f, 18), "Wave Reached:", statLabelStyle);
+        string waveStr = isNewBestWave ? $"Wave {waveReached} (NEW BEST!)" : $"Wave {waveReached} (Best: {bestWave})";
+        statValStyle.normal.textColor = isNewBestWave ? new Color(0.3f, 1f, 0.5f) : Color.white;
+        GUI.Label(new Rect(leftColRect.x + 12f, rowY, colW - 24f, 18), waveStr, statValStyle);
+        rowY += rowH;
+
+        // Waves Cleared
+        statValStyle.normal.textColor = Color.white;
+        GUI.Label(new Rect(leftColRect.x + 12f, rowY, colW - 24f, 18), "Waves Cleared:", statLabelStyle);
+        GUI.Label(new Rect(leftColRect.x + 12f, rowY, colW - 24f, 18), $"{wavesCleared} Waves", statValStyle);
+        rowY += rowH;
+
+        // Time Survived
+        int mins = Mathf.FloorToInt(survivalDuration / 60f);
+        int secs = Mathf.FloorToInt(survivalDuration % 60f);
+        GUI.Label(new Rect(leftColRect.x + 12f, rowY, colW - 24f, 18), "Time Survived:", statLabelStyle);
+        GUI.Label(new Rect(leftColRect.x + 12f, rowY, colW - 24f, 18), $"{mins:00}:{secs:00}", statValStyle);
+        rowY += rowH;
+
+        // Overloads Activated
+        GUI.Label(new Rect(leftColRect.x + 12f, rowY, colW - 24f, 18), "Overloads Triggered:", statLabelStyle);
+        GUI.Label(new Rect(leftColRect.x + 12f, rowY, colW - 24f, 18), $"{overloadActivations} Times", statValStyle);
+        rowY += rowH;
+
+        // Max Combo Streak
+        GUI.Label(new Rect(leftColRect.x + 12f, rowY, colW - 24f, 18), "Peak Chain Combo:", statLabelStyle);
+        string gradeStr = highestGrade != ComboGrade.None ? $"Grade {GetGradeString(highestGrade)}" : "Rank -";
+        statValStyle.normal.textColor = GetGradeColor(highestGrade);
+        GUI.Label(new Rect(leftColRect.x + 12f, rowY, colW - 24f, 18), $"{maxComboHits} Hits ({gradeStr})", statValStyle);
+
+        // Right Column: Destruction & Harvesting Record
+        Rect rightColRect = new Rect(x + 20f + colW + 10f, colY, colW, colH);
+        GUI.Box(rightColRect, GUIContent.none);
+
+        colHeaderStyle.normal.textColor = new Color(1f, 0.55f, 0.25f);
+        GUI.Label(new Rect(rightColRect.x + 12f, colY + 8f, colW - 24f, 18), "DESTRUCTION & HARVEST", colHeaderStyle);
+
+        rowY = colY + 30f;
+        statValStyle.normal.textColor = Color.white;
+
+        // Total Asteroids Destroyed
+        GUI.Label(new Rect(rightColRect.x + 12f, rowY, colW - 24f, 18), "Total Meteors Destroyed:", statLabelStyle);
+        statValStyle.normal.textColor = new Color(1f, 0.85f, 0.2f);
+        GUI.Label(new Rect(rightColRect.x + 12f, rowY, colW - 24f, 18), $"{totalAsteroidsDestroyed}", statValStyle);
+        rowY += rowH;
+
+        // Breakdown sublabels
+        GUIStyle subBreakdown = new GUIStyle(GUI.skin.label) { fontSize = 10 };
+        subBreakdown.normal.textColor = new Color(0.75f, 0.75f, 0.75f);
+
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 28f, 16), "• Normal (Threat 1.0):", subBreakdown);
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{normalDestroyed}", new GUIStyle(subBreakdown) { alignment = TextAnchor.MiddleRight });
+        rowY += 17f;
+
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 28f, 16), "• Speedy (Threat 1.5):", subBreakdown);
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{speedyDestroyed}", new GUIStyle(subBreakdown) { alignment = TextAnchor.MiddleRight });
+        rowY += 17f;
+
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 28f, 16), "• Tanky (Threat 2.0):", subBreakdown);
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{tankyDestroyed}", new GUIStyle(subBreakdown) { alignment = TextAnchor.MiddleRight });
+        rowY += 17f;
+
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 28f, 16), "• Magnet (Threat 3.0):", subBreakdown);
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{magnetDestroyed}", new GUIStyle(subBreakdown) { alignment = TextAnchor.MiddleRight });
+        rowY += 21f;
+
+        // Total Resources Harvested
+        statValStyle.normal.textColor = new Color(0.3f, 1f, 0.5f);
+        GUI.Label(new Rect(rightColRect.x + 12f, rowY, colW - 24f, 18), "Resources Harvested:", statLabelStyle);
+        GUI.Label(new Rect(rightColRect.x + 12f, rowY, colW - 24f, 18), $"{totalResourcesEarned} Res", statValStyle);
+
+        // 5. Interactive Navigation Buttons Row
+        float btnY = colY + colH + 12f;
+        float btnW = (modalWidth - 60f) / 3f;
+        float btnH = 38f;
+
+        // Button 1: Retry
+        Rect retryRect = new Rect(x + 20f, btnY, btnW, btnH);
+        if (GUI.Button(retryRect, "RETRY MISSION [R]"))
+        {
+            RestartGame();
+        }
+
+        // Button 2: Main Menu
+        Rect menuRect = new Rect(x + 20f + btnW + 10f, btnY, btnW, btnH);
+        if (GUI.Button(menuRect, "MAIN MENU [M]"))
+        {
+            ReturnToMainMenu();
+        }
+
+        // Button 3: Quit
+        Rect quitRect = new Rect(x + 20f + (btnW + 10f) * 2f, btnY, btnW, btnH);
+        if (GUI.Button(quitRect, "QUIT GAME [ESC]"))
+        {
+            Application.Quit();
+        }
     }
 }

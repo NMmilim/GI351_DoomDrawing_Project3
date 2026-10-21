@@ -195,3 +195,10 @@ To ensure a smooth learning curve, enemy variety is gated across waves rather th
   - [x] Laser Cannon (Cost: 10, Pierce: 0, Medium speed).
   - [x] Railgun (Cost: 25, Pierce: 1, High speed, destroys Tanky/Magnet).
   - [x] Disposable Mine (Cost: 50, Slow, shoot-to-detonate, time-scaling radius).
+- [x] **Comprehensive Game Over Menu & Debrief:**
+  - [x] Always-visible Game Over modal overlay upon resource exhaustion.
+  - [x] Final Score & All-Time High Score tracking (`PlayerPrefs`).
+  - [x] Waves Progressed (Wave Reached, Waves Cleared, Best Wave Record).
+  - [x] Asteroids Destroyed (Total count & breakdown: Normal, Speedy, Tanky, Magnet).
+  - [x] Peak Combo Streak & Highest Rank achieved, Survival Time, Overload count.
+  - [x] Interactive clickable GUI buttons & hotkeys: [R] Retry, [M] Main Menu, [ESC] Quit.

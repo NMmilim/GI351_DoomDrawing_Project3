@@ -555,7 +555,7 @@ public class Rock : MonoBehaviour
         }
         else if (ComboManager.Instance != null)
         {
-            ComboManager.Instance.TriggerGameOver();
+            ComboManager.Instance.TriggerGameOver($"Earth Breached by {meteorType} Asteroid");
         }
 
         Destroy(gameObject);

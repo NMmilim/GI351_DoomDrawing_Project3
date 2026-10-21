@@ -549,7 +549,8 @@ public class Player_controller : MonoBehaviour
             Debug.LogError("[Game Over] Earth defenses depleted! Resource pool reached 0 from asteroid impact.");
             if (ComboManager.Instance != null)
             {
-                ComboManager.Instance.TriggerGameOver();
+                string cause = rock != null ? $"Earth Breached by {rock.meteorType} Asteroid" : "Earth Defenses Depleted";
+                ComboManager.Instance.TriggerGameOver(cause);
             }
         }
     }
