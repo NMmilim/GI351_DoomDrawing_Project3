@@ -93,6 +93,8 @@ public class Player_controller : MonoBehaviour
     private float lightningCooldownTimer = 0f;
     private float currentAngle;
     private float angleVelocity;
+    private float earthDamageAlertTimer = 0f;
+    private int lastEarthDamageDrain = 0;
 
     // Public Getters for Economy & Weapon Systems
     public WeaponType CurrentWeapon => currentWeapon;
@@ -189,6 +191,11 @@ public class Player_controller : MonoBehaviour
 
     void Update()
     {
+        if (earthDamageAlertTimer > 0f)
+        {
+            earthDamageAlertTimer -= Time.deltaTime;
+        }
+
         MouseAim();
 
         HandleWeaponSwitching();
@@ -524,6 +531,29 @@ public class Player_controller : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Called when an asteroid breaches player defense and impacts Earth.
+    /// Drains resources directly from the player's pool.
+    /// When resources reach 0, Earth collapses and Game Over is triggered!
+    /// </summary>
+    public void DrainResourcesFromEarthImpact(int drainAmount, Rock rock)
+    {
+        resources = Mathf.Max(0, resources - drainAmount);
+        earthDamageAlertTimer = 2.0f;
+        lastEarthDamageDrain = drainAmount;
+
+        Debug.LogWarning($"[Earth Impact] {rock.name} ({rock.meteorType}, Threat: {rock.threatValue}) struck Earth! Drained {drainAmount} resources. Remaining: {resources}");
+
+        if (resources <= 0)
+        {
+            Debug.LogError("[Game Over] Earth defenses depleted! Resource pool reached 0 from asteroid impact.");
+            if (ComboManager.Instance != null)
+            {
+                ComboManager.Instance.TriggerGameOver();
+            }
+        }
+    }
+
     // Legacy wrappers for backward compatibility
     public void AddRegularAmmo(int amount) => AddResources(amount);
     public void AddRicochetAmmo(int amount) => AddResources(amount);
@@ -579,9 +609,27 @@ public class Player_controller : MonoBehaviour
             fontStyle = FontStyle.Bold,
             alignment = TextAnchor.MiddleLeft
         };
-        resStyle.normal.textColor = isOverload ? new Color(1f, 0.85f, 0.1f) : new Color(0.3f, 1f, 0.5f);
-        string resText = isOverload ? "RESOURCES: FREE FIRING (OVERLOAD!)" : $"RESOURCES: {resources}";
-        GUI.Label(new Rect(x + 12, y + 23, cardWidth - 24, 20), resText, resStyle);
+
+        if (earthDamageAlertTimer > 0f)
+        {
+            float pulse = Mathf.PingPong(Time.time * 8f, 1f);
+            resStyle.normal.textColor = Color.Lerp(new Color(1f, 0.2f, 0.1f), Color.yellow, pulse);
+            string alertText = $"EARTH HIT! -{lastEarthDamageDrain} RES  |  RESOURCES: {resources}";
+            GUI.Label(new Rect(x + 12, y + 23, cardWidth - 24, 20), alertText, resStyle);
+        }
+        else
+        {
+            if (isOverload)
+                resStyle.normal.textColor = new Color(1f, 0.85f, 0.1f);
+            else if (resources <= 25)
+                resStyle.normal.textColor = new Color(1f, 0.35f, 0.35f);
+            else
+                resStyle.normal.textColor = new Color(0.3f, 1f, 0.5f);
+
+            string statusSuffix = (resources <= 25 && !isOverload) ? " (DEFENSE CRITICAL!)" : "";
+            string resText = isOverload ? "RESOURCES: FREE FIRING (OVERLOAD!)" : $"EARTH ENERGY / RESOURCES: {resources}{statusSuffix}";
+            GUI.Label(new Rect(x + 12, y + 23, cardWidth - 24, 20), resText, resStyle);
+        }
 
         // Weapon Selection Slots Row: [1] Laser  [2] Railgun  [3] Mine
         float slotW = (cardWidth - 24f) / 3f;

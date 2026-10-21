@@ -110,7 +110,7 @@ public class RailgunBullet : Bullet
         }
     }
 
-    private bool CheckDisposableMine(GameObject target)
+    protected override bool CheckDisposableMine(GameObject target)
     {
         DisposableMine mine = target.GetComponent<DisposableMine>();
         if (mine != null && !mine.IsDetonated)

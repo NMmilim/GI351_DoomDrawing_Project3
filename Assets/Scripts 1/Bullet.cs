@@ -64,7 +64,7 @@ public class Bullet : MonoBehaviour
         }
     }
 
-    protected bool CheckDisposableMine(GameObject target)
+    protected virtual bool CheckDisposableMine(GameObject target)
     {
         DisposableMine mine = target.GetComponent<DisposableMine>();
         if (mine != null && !mine.IsDetonated)

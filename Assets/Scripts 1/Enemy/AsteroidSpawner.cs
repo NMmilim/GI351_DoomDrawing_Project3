@@ -104,6 +104,13 @@ public class AsteroidSpawner : MonoBehaviour
         [Tooltip("Base chain cost added in subsequent chain combo destructions.")]
         public int baseChainCost = 5;
 
+        [Header("Threat Rating & Earth Impact")]
+        [Tooltip("Threat value rating of this meteor (Normal: 1, Speedy: 1.5, Tanky: 2, Magnet: 3).")]
+        public float threatValue = 1.0f;
+
+        [Tooltip("Resources drained from player pool when an asteroid of this type impacts Earth.")]
+        public int earthImpactDrain = 20;
+
         [Header("Special Ability (Magnet)")]
         [Tooltip("Inward gravitational pull force for Magnet meteor implosion vortex.")]
         public float vortexPullForce = 22f;
@@ -122,7 +129,9 @@ public class AsteroidSpawner : MonoBehaviour
         blastRadiusMultiplier = 2.5f,
         immuneToNormalFire = false,
         baseResourceDrop = 7,
-        baseChainCost = 5
+        baseChainCost = 5,
+        threatValue = 1.0f,
+        earthImpactDrain = 20
     };
 
     [SerializeField] private MeteorTypeConfig speedyMeteor = new MeteorTypeConfig
@@ -137,7 +146,9 @@ public class AsteroidSpawner : MonoBehaviour
         blastRadiusMultiplier = 1.5f,
         immuneToNormalFire = false,
         baseResourceDrop = 3,
-        baseChainCost = 10
+        baseChainCost = 10,
+        threatValue = 1.5f,
+        earthImpactDrain = 30
     };
 
     [SerializeField] private MeteorTypeConfig tankyMeteor = new MeteorTypeConfig
@@ -152,7 +163,9 @@ public class AsteroidSpawner : MonoBehaviour
         blastRadiusMultiplier = 1.5f,
         immuneToNormalFire = true,
         baseResourceDrop = 5,
-        baseChainCost = 7
+        baseChainCost = 7,
+        threatValue = 2.0f,
+        earthImpactDrain = 40
     };
 
     [SerializeField] private MeteorTypeConfig magnetMeteor = new MeteorTypeConfig
@@ -168,22 +181,42 @@ public class AsteroidSpawner : MonoBehaviour
         immuneToNormalFire = true,
         baseResourceDrop = 8,
         baseChainCost = 15,
-        vortexPullForce = 22f
+        vortexPullForce = 22f,
+        threatValue = 3.0f,
+        earthImpactDrain = 60
     };
 
     [Header("Fallback Asteroid Prefab (Optional)")]
     [Tooltip("General fallback prefab used if a specific meteor type does not have a prefab assigned. If left empty, it automatically falls back to the Normal meteor prefab.")]
     [SerializeField] private GameObject fallbackAsteroidPrefab;
 
-    [Header("Wave Progression")]
+    [Header("Paced Wave Progression (Inspector Editable)")]
     [Tooltip("Current wave number.")]
     [SerializeField] private int currentWave = 1;
-    [Tooltip("Number of asteroids in Wave 1.")]
-    [SerializeField] private int baseWaveCount = 6;
-    [Tooltip("Additional asteroids added per wave.")]
-    [SerializeField] private int countIncreasePerWave = 3;
     [Tooltip("Break time (in seconds) between waves.")]
     [SerializeField] private float timeBetweenWaves = 4.0f;
+    [Tooltip("Whether to use staged enemy introduction (Wave 1-3: Normal only, Wave 4: Speedy intro, Wave 5: Tanky intro, Wave 6: Magnet intro).")]
+    [SerializeField] private bool enablePacedIntroduction = true;
+
+    [Header("Early Game Swarm (Waves 1 - 3: Normal Threat Only)")]
+    [Tooltip("Drastically increasing spawn counts of Normal asteroids only (Threat 1.0) so the player masters controls and combos.")]
+    [SerializeField] private int wave1Count = 6;
+    [SerializeField] private int wave2Count = 12;
+    [SerializeField] private int wave3Count = 20;
+
+    [Header("Enemy Introduction Phase (Reduced Counts for Learning)")]
+    [Tooltip("Wave 4: Speedy debut (Threat 1.5). Reduced count so player can adapt to high-speed targets.")]
+    [SerializeField] private int wave4SpeedyIntroCount = 8;
+    [Tooltip("Wave 5: Tanky debut (Threat 2.0). Reduced count so player can learn Railgun and explosion tactics.")]
+    [SerializeField] private int wave5TankyIntroCount = 7;
+    [Tooltip("Wave 6: Magnet debut (Threat 3.0). Reduced count so player can learn vortex implosion mechanics.")]
+    [SerializeField] private int wave6MagnetIntroCount = 7;
+
+    [Header("Endless Escalation Phase (Wave 7+)")]
+    [Tooltip("Base asteroid count for Wave 7 once all enemies have been introduced.")]
+    [SerializeField] private int endlessBaseCount = 10;
+    [Tooltip("Incremental asteroid count added for every wave beyond Wave 7.")]
+    [SerializeField] private int endlessCountIncreasePerWave = 3;
 
     [Header("Chunk / Bulk Spawning")]
     [Tooltip("Minimum number of asteroids in a chunk.")]
@@ -283,7 +316,7 @@ public class AsteroidSpawner : MonoBehaviour
         // Indicators disappear when the wave starts!
         ClearIndicators();
 
-        targetWaveCount = baseWaveCount + (currentWave - 1) * countIncreasePerWave;
+        targetWaveCount = CalculateWaveAsteroidCount(currentWave);
         spawnedInCurrentWave = 0;
         currentState = SpawnerState.Spawning;
 
@@ -516,14 +549,116 @@ public class AsteroidSpawner : MonoBehaviour
     }
 
 
+    /// <summary>
+    /// Calculates the number of asteroids to spawn for the specified wave:
+    /// - Waves 1-3 (Early Game): Threat 1 only (Normal), count drastically increases (6 -> 12 -> 20) to learn basic shooting & combos.
+    /// - Wave 4 (Speedy Intro): Reduced count (8) so player can adapt to fast targets.
+    /// - Wave 5 (Tanky Intro): Reduced count (7) so player can practice Railgun & explosions.
+    /// - Wave 6 (Magnet Intro): Reduced count (7) so player can understand vortex mechanics.
+    /// - Wave 7+ (Endless): Count increases incrementally wave by wave.
+    /// </summary>
+    public int CalculateWaveAsteroidCount(int wave)
+    {
+        if (!enablePacedIntroduction)
+        {
+            return wave1Count + (wave - 1) * endlessCountIncreasePerWave;
+        }
+
+        switch (wave)
+        {
+            case 1: return wave1Count;
+            case 2: return wave2Count;
+            case 3: return wave3Count;
+            case 4: return wave4SpeedyIntroCount;
+            case 5: return wave5TankyIntroCount;
+            case 6: return wave6MagnetIntroCount;
+            default:
+                // Wave 7+: Increases gradually
+                return endlessBaseCount + (wave - 7) * endlessCountIncreasePerWave;
+        }
+    }
+
+    /// <summary>
+    /// Selects an asteroid configuration based on wave progression and threat gating:
+    /// - Wave 1-3 (Early Game): Threat 1.0 only (Normal asteroids).
+    /// - Wave 4: Speedy debut (Threat 1.5). Normal & Speedy only.
+    /// - Wave 5: Tanky debut (Threat 2.0). Normal, Speedy & Tanky.
+    /// - Wave 6: Magnet debut (Threat 3.0). All 4 types with Magnet featured.
+    /// - Wave 7+: Endless mode - all 4 enemy types active, weights and chances scale with wave progress.
+    /// </summary>
     public MeteorTypeConfig RollMeteorConfig()
     {
-        int wNormal = Mathf.Max(0, normalMeteor != null ? normalMeteor.spawnWeight : 50);
-        int wSpeedy = Mathf.Max(0, speedyMeteor != null ? speedyMeteor.spawnWeight : 25);
-        int wTanky = Mathf.Max(0, tankyMeteor != null ? tankyMeteor.spawnWeight : 15);
-        int wMagnet = Mathf.Max(0, magnetMeteor != null ? magnetMeteor.spawnWeight : 10);
+        if (!enablePacedIntroduction)
+        {
+            return RollFromWeights(
+                normalMeteor != null ? normalMeteor.spawnWeight : 50,
+                speedyMeteor != null ? speedyMeteor.spawnWeight : 25,
+                tankyMeteor != null ? tankyMeteor.spawnWeight : 15,
+                magnetMeteor != null ? magnetMeteor.spawnWeight : 10
+            );
+        }
 
-        int totalWeight = wNormal + wSpeedy + wTanky + wMagnet;
+        // Wave 1-3: Early game - Only Normal Asteroids (Threat 1.0)
+        if (currentWave <= 3)
+        {
+            return normalMeteor;
+        }
+
+        // Wave 4: Speedy debut - Normal & Speedy only
+        if (currentWave == 4)
+        {
+            int wNormal = Mathf.Max(1, normalMeteor != null ? normalMeteor.spawnWeight : 50);
+            int wSpeedy = Mathf.Max(1, speedyMeteor != null ? Mathf.Max(speedyMeteor.spawnWeight, 45) : 45);
+            return UnityEngine.Random.Range(0, wNormal + wSpeedy) < wNormal ? normalMeteor : speedyMeteor;
+        }
+
+        // Wave 5: Tanky debut - Normal, Speedy, and Tanky
+        if (currentWave == 5)
+        {
+            int wNormal = Mathf.Max(1, normalMeteor != null ? normalMeteor.spawnWeight : 50);
+            int wSpeedy = Mathf.Max(1, speedyMeteor != null ? speedyMeteor.spawnWeight : 25);
+            int wTanky = Mathf.Max(1, tankyMeteor != null ? Mathf.Max(tankyMeteor.spawnWeight, 35) : 35);
+            int roll = UnityEngine.Random.Range(0, wNormal + wSpeedy + wTanky);
+            if (roll < wNormal) return normalMeteor;
+            roll -= wNormal;
+            if (roll < wSpeedy) return speedyMeteor;
+            return tankyMeteor;
+        }
+
+        // Wave 6: Magnet debut - All 4 types with Magnet featured
+        if (currentWave == 6)
+        {
+            int wNormal = Mathf.Max(1, normalMeteor != null ? normalMeteor.spawnWeight : 50);
+            int wSpeedy = Mathf.Max(1, speedyMeteor != null ? speedyMeteor.spawnWeight : 25);
+            int wTanky = Mathf.Max(1, tankyMeteor != null ? tankyMeteor.spawnWeight : 20);
+            int wMagnet = Mathf.Max(1, magnetMeteor != null ? Mathf.Max(magnetMeteor.spawnWeight, 30) : 30);
+            int roll = UnityEngine.Random.Range(0, wNormal + wSpeedy + wTanky + wMagnet);
+            if (roll < wNormal) return normalMeteor;
+            roll -= wNormal;
+            if (roll < wSpeedy) return speedyMeteor;
+            roll -= wSpeedy;
+            if (roll < wTanky) return tankyMeteor;
+            return magnetMeteor;
+        }
+
+        // Wave 7+: Endless mode - all 4 enemy types active
+        // Chances and weights increase little by little with wave progress
+        int baseWNormal = Mathf.Max(0, normalMeteor != null ? normalMeteor.spawnWeight : 50);
+        int baseWSpeedy = Mathf.Max(0, speedyMeteor != null ? speedyMeteor.spawnWeight : 25);
+        int baseWTanky = Mathf.Max(0, tankyMeteor != null ? tankyMeteor.spawnWeight : 15);
+        int baseWMagnet = Mathf.Max(0, magnetMeteor != null ? magnetMeteor.spawnWeight : 10);
+
+        int waveBonus = currentWave - 7;
+        int scaledSpeedy = baseWSpeedy + waveBonus * 1;
+        int scaledTanky = baseWTanky + waveBonus * 1;
+        int scaledMagnet = baseWMagnet + (waveBonus / 2);
+
+        return RollFromWeights(baseWNormal, scaledSpeedy, scaledTanky, scaledMagnet);
+    }
+
+    private MeteorTypeConfig RollFromWeights(int wNormal, int wSpeedy, int wTanky, int wMagnet)
+    {
+        int totalWeight = Mathf.Max(0, wNormal) + Mathf.Max(0, wSpeedy) + Mathf.Max(0, wTanky) + Mathf.Max(0, wMagnet);
         if (totalWeight <= 0) return normalMeteor;
 
         int roll = UnityEngine.Random.Range(0, totalWeight);
@@ -539,6 +674,21 @@ public class AsteroidSpawner : MonoBehaviour
     {
         MeteorTypeConfig cfg = RollMeteorConfig();
         return cfg != null ? cfg.type : MeteorType.Normal;
+    }
+
+    public string GetWaveThreatDescription(int wave)
+    {
+        if (!enablePacedIntroduction) return "ALL THREATS ACTIVE";
+        switch (wave)
+        {
+            case 1: return "STAGE 1: NORMAL THREAT (LEARN COMBOS)";
+            case 2: return "STAGE 2: SWARM INTENSIFIES";
+            case 3: return "STAGE 3: DENSE SWARM (FINAL DRILL)";
+            case 4: return "NEW THREAT: SPEEDY METEORS (FAST)";
+            case 5: return "NEW THREAT: TANKY METEORS (RAILGUN/EXPLOSION)";
+            case 6: return "NEW THREAT: MAGNET VORTEX (GRAVITY PULL)";
+            default: return "ENDLESS SURVIVAL: ALL THREATS ESCALATING";
+        }
     }
 
     private void StartIntermission(float duration)
@@ -576,8 +726,8 @@ public class AsteroidSpawner : MonoBehaviour
     {
         if (!showWaveHUD) return;
 
-        float bannerWidth = 260f;
-        float bannerHeight = 48f;
+        float bannerWidth = 340f;
+        float bannerHeight = 52f;
         float x = (Screen.width - bannerWidth) * 0.5f;
         float y = 15f;
 
@@ -595,12 +745,12 @@ public class AsteroidSpawner : MonoBehaviour
         {
             float pulse = Mathf.PingPong(Time.time * 4f, 1f);
             waveStyle.normal.textColor = Color.Lerp(new Color(1f, 0.8f, 0.2f), new Color(1f, 0.3f, 0.15f), pulse);
-            statusText = $"Wave {currentWave} in {Mathf.CeilToInt(waveTimer)}s";
+            statusText = $"Wave {currentWave} in {Mathf.CeilToInt(waveTimer)}s ({CalculateWaveAsteroidCount(currentWave)} Meteors)";
         }
         else
         {
             waveStyle.normal.textColor = new Color(1f, 0.85f, 0.2f);
-            statusText = $"WAVE {currentWave} ({activeAsteroids.Count} Left)";
+            statusText = $"WAVE {currentWave} ({activeAsteroids.Count} Left / {targetWaveCount} Total)";
         }
 
         GUI.Label(new Rect(x, y + 3, bannerWidth, 22), statusText, waveStyle);
@@ -610,19 +760,29 @@ public class AsteroidSpawner : MonoBehaviour
             fontSize = 11,
             alignment = TextAnchor.MiddleCenter
         };
-        subStyle.normal.textColor = new Color(0.85f, 0.85f, 0.85f);
+
+        string threatDesc = GetWaveThreatDescription(currentWave);
+        if (currentWave >= 4 && currentWave <= 6)
+        {
+            subStyle.normal.textColor = new Color(1f, 0.8f, 0.2f);
+            subStyle.fontStyle = FontStyle.Bold;
+        }
+        else
+        {
+            subStyle.normal.textColor = new Color(0.85f, 0.85f, 0.85f);
+        }
 
         string subText;
         if (currentState == SpawnerState.Intermission)
         {
-            subText = $"⚠ INCOMING SECTOR: {Mathf.RoundToInt(nextSpawnAngle)}°";
+            subText = $"⚠ SECTOR: {Mathf.RoundToInt(nextSpawnAngle)}°  |  {threatDesc}";
         }
         else
         {
-            subText = "DEFEND EARTH";
+            subText = threatDesc;
         }
 
-        GUI.Label(new Rect(x, y + 25, bannerWidth, 18), subText, subStyle);
+        GUI.Label(new Rect(x, y + 26, bannerWidth, 20), subText, subStyle);
     }
 }
 

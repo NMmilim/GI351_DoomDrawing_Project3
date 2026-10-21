@@ -31,6 +31,12 @@ public class Rock : MonoBehaviour
     [Tooltip("Inward gravitational pull impulse for Magnet meteor vortex.")]
     public float vortexPullForce = 22f;
 
+    [Header("Threat Rating & Earth Impact (Inspector Editable)")]
+    [Tooltip("Threat value rating of this meteor (Normal: 1, Speedy: 1.5, Tanky: 2, Magnet: 3).")]
+    public float threatValue = 1.0f;
+    [Tooltip("Amount of resources drained from player's pool when this asteroid impacts Earth.")]
+    public int earthImpactDrain = 20;
+
     [Header("Enemy Collision & Health")]
     [SerializeField] private string enemy_tag = "Enemy";
     [SerializeField] private LayerMask enemy_layers;
@@ -170,6 +176,8 @@ public class Rock : MonoBehaviour
             baseResourceDrop = config.baseResourceDrop;
             baseChainCost = config.baseChainCost;
             vortexPullForce = config.vortexPullForce;
+            threatValue = config.threatValue;
+            earthImpactDrain = config.earthImpactDrain;
         }
 
         // Pick and apply sprite from spawner config or rock's customSprites
@@ -211,6 +219,8 @@ public class Rock : MonoBehaviour
                 maxhp = 1;
                 initialInwardSpeed = 1.5f;
                 terminalVelocity = 7.0f;
+                threatValue = 1.0f;
+                earthImpactDrain = 20;
                 transform.localScale = Vector3.one * 1.0f;
                 break;
 
@@ -222,6 +232,8 @@ public class Rock : MonoBehaviour
                 maxhp = 1;
                 terminalVelocity = 10.0f;
                 initialInwardSpeed = 2.4f;
+                threatValue = 1.5f;
+                earthImpactDrain = 30;
                 transform.localScale = Vector3.one * 0.7f;
                 break;
 
@@ -233,6 +245,8 @@ public class Rock : MonoBehaviour
                 maxhp = 3;
                 terminalVelocity = 4.5f;
                 initialInwardSpeed = 1.2f;
+                threatValue = 2.0f;
+                earthImpactDrain = 40;
                 transform.localScale = Vector3.one * 1.5f;
                 break;
 
@@ -245,6 +259,8 @@ public class Rock : MonoBehaviour
                 maxhp = 2;
                 terminalVelocity = 5.0f;
                 initialInwardSpeed = 1.3f;
+                threatValue = 3.0f;
+                earthImpactDrain = 60;
                 transform.localScale = Vector3.one * 1.0f;
                 break;
         }
@@ -520,15 +536,24 @@ public class Rock : MonoBehaviour
 
     /// <summary>
     /// Called when the asteroid impacts Earth's surface.
-    /// Triggers Sudden Death Instant Game Over!
+    /// Drains player resources; when resources hit 0, triggers Game Over!
     /// </summary>
     private void HitEarth()
     {
         if (isDead) return;
         isDead = true;
 
-        Debug.LogWarning($"[Rock] {name} collided with Earth! Triggering Sudden Death Game Over.");
-        if (ComboManager.Instance != null)
+        if (explosionVFXPrefab != null)
+        {
+            Instantiate(explosionVFXPrefab, transform.position, Quaternion.identity);
+        }
+
+        Debug.LogWarning($"[Rock] {name} ({meteorType}, Threat: {threatValue}) collided with Earth! Draining {earthImpactDrain} resources.");
+        if (Player_controller.Instance != null)
+        {
+            Player_controller.Instance.DrainResourcesFromEarthImpact(earthImpactDrain, this);
+        }
+        else if (ComboManager.Instance != null)
         {
             ComboManager.Instance.TriggerGameOver();
         }

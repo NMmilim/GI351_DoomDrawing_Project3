@@ -5,7 +5,7 @@ A 2D orbital wave-defense shooter set in Earth's orbit. The player controls an o
 
 - **Perspective:** 2D top-down orbital view. Earth is at the center (0, 0, 0).
 - **Game Mode:** Endless Survival. The player aims to survive as long as possible while maximizing Chain Combo multipliers and resource scores.
-- **Game Over Condition:** Sudden Death. The game ends immediately when ANY meteor / asteroid collides with Earth before being destroyed.
+- **Game Over Condition:** Resource Pool Depletion. Earth has no isolated health bar. When any asteroid impacts Earth, it breaches planetary defenses and drains the player's unified **Resource Pool** based on its Threat Value (Normal: -20, Speedy: -30, Tanky: -40, Magnet: -60). The game ends when resources reach 0 from an Earth impact.
 - **Player Defense:** Gunner rotates along an orbital ring around Earth, facing outward to engage 360° incoming threats.
 
 ---
@@ -58,32 +58,32 @@ All weapons consume a shared **Resource Pool** earned from destroying meteors.
 
 ### 2.4 Meteor Types & Behaviors (ประเภทอุกกาบาต)
 
-| Meteor Type | Size | Speed | Blast / Effect Radius | Special Trait | Base Drop | Chain Cost Formula |
-| :--- | :---: | :---: | :---: | :--- | :---: | :---: |
-| **Normal** | Medium (1.0) | Medium | $2.5\times$ Size ($r=2.5$) | None. Standard exploding asteroid. | 7 | $5 + \lfloor\frac{\text{Combo}}{2}\rfloor$ |
-| **Speedy** | Small (<1.0) | Fast | $1.5\times$ Size | Fast agile threat. | 3 | $10 + \lfloor\frac{\text{Combo}}{2}\rfloor$ |
-| **Tanky** | Large (>1.0) | Slow | $1.5\times$ Size | **Immune to normal fire (Laser Cannon).** Must be destroyed by explosions or Railgun. | 5 | $7 + \lfloor\frac{\text{Combo}}{2}\rfloor$ |
-| **Magnet** | Medium (1.0) | Slow | $5.0\times$ Size (Vortex) | **Immune to normal fire.** On death, does NOT deal blast damage; creates a gravitational vortex pulling all nearby meteors into a tight cluster. | 8 | $15 + \lfloor\frac{\text{Combo}}{2}\rfloor$ |
+| Meteor Type | Threat Value | Size | Speed | Blast / Effect Radius | Special Trait | Base Drop | Chain Cost Formula | Earth Impact Drain |
+| :--- | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :---: |
+| **Normal** | 1.0 | Medium (1.0) | Medium | $2.5\times$ Size ($r=2.5$) | Standard exploding asteroid. 3 visual variants. | 7 | $5 + \lfloor\frac{\text{Combo}}{2}\rfloor$ | -20 Res |
+| **Speedy** | 1.5 | Small (<1.0) | Fast | $1.5\times$ Size | Fast agile threat. | 3 | $10 + \lfloor\frac{\text{Combo}}{2}\rfloor$ | -30 Res |
+| **Tanky** | 2.0 | Large (>1.0) | Slow | $1.5\times$ Size | **Immune to normal fire (Laser Cannon).** Must be destroyed by explosions or Railgun. | 5 | $7 + \lfloor\frac{\text{Combo}}{2}\rfloor$ | -40 Res |
+| **Magnet** | 3.0 | Medium (1.0) | Slow | $5.0\times$ Size (Vortex) | **Immune to normal fire.** On death, does NOT deal blast damage; creates a gravitational vortex pulling all nearby meteors into a tight cluster. | 8 | $15 + \lfloor\frac{\text{Combo}}{2}\rfloor$ | -60 Res |
 
 #### Detailed Meteor Specifications:
-1. **Normal Meteor:**
-   - Balanced speed and medium size.
+1. **Normal Meteor (Threat 1.0):**
+   - Balanced speed and medium size. Supports 3 random visual sprite/mesh variants.
    - Detonates on death with a blast radius equal to $2.5\times$ its body radius (e.g. size 1.0 $\rightarrow$ blast radius 2.5).
-   - Yields 7 base resources on first destruction.
-2. **Speedy Meteor:**
+   - Yields 7 base resources on first destruction. Earth impact drains 20 resources.
+2. **Speedy Meteor (Threat 1.5):**
    - Small hitbox moving at high velocity toward Earth.
    - Blast radius of $1.5\times$ its size.
-   - Yields 3 base resources. Chain cost: $10 + \frac{\text{combo}}{2}$.
-3. **Tanky Meteor:**
+   - Yields 3 base resources. Chain cost: $10 + \frac{\text{combo}}{2}$. Earth impact drains 30 resources.
+3. **Tanky Meteor (Threat 2.0):**
    - Heavy, slow-moving asteroid with high presence.
    - Cannot be damaged or destroyed by the Laser Cannon.
    - Destruction requires an explosive blast from a neighboring meteor/mine OR a direct shot from the **Railgun**.
-   - Blast radius of $1.5\times$ its size. Yields 5 base resources. Chain cost: $7 + \frac{\text{combo}}{2}$.
-4. **Magnet Meteor:**
+   - Blast radius of $1.5\times$ its size. Yields 5 base resources. Chain cost: $7 + \frac{\text{combo}}{2}$. Earth impact drains 40 resources.
+4. **Magnet Meteor (Threat 3.0):**
    - Slow-moving utility asteroid.
    - Cannot be damaged by the Laser Cannon; requires an explosion or Railgun shot.
    - **Vortex Implosion:** On death, does not deal damage. Instead emits an inward gravitational pull covering $5.0\times$ its size, dragging all surrounding meteors inward into a tight cluster for easy chaining.
-   - Yields 8 base resources. Chain cost: $15 + \frac{\text{combo}}{2}$.
+   - Yields 8 base resources. Chain cost: $15 + \frac{\text{combo}}{2}$. Earth impact drains 60 resources.
 
 ---
 
@@ -128,19 +128,39 @@ All weapons consume a shared **Resource Pool** earned from destroying meteors.
 
 ---
 
+### 2.7 Paced Wave Progression & Threat Gating
+To ensure a smooth learning curve, enemy variety is gated across waves rather than randomized upfront:
+
+1. **Early Swarm Phase (Waves 1–3):**
+   - **Enemies:** Normal Meteors only (Threat 1.0).
+   - **Spawn Count:** Drastically increases wave-by-wave ($6 \rightarrow 12 \rightarrow 20$).
+   - **Goal:** Gives players ample room to learn orbital movement, mouse aiming, weapon conservation, and chain combo timing.
+2. **Enemy Introduction Phase (Waves 4–6):**
+   - Every time a higher-threat enemy is introduced, total asteroid count is intentionally **reduced** to allow players to observe and adapt to the new behavior:
+     - **Wave 4 (Speedy Debut):** Threat 1.0 & 1.5. Spawn count drops to **8**. Players practice tracking high-speed targets.
+     - **Wave 5 (Tanky Debut):** Threat 1.0, 1.5 & 2.0. Spawn count drops to **7**. Players learn that normal laser fire bounces off and practice Railgun penetration and explosion chaining.
+     - **Wave 6 (Magnet Debut):** All 4 threats active. Spawn count drops to **7**. Players observe vortex implosions and how they cluster asteroids for massive combos.
+3. **Endless Escalation Phase (Wave 7+):**
+   - All 4 enemy types active simultaneously.
+   - Asteroid counts escalate smoothly ($10 + 3 \times (\text{Wave} - 7)$).
+   - Advanced threat spawn weights increase little by little each wave.
+
+---
+
 ## 3. Script Structure & Architecture
 
-- `Player_controller.cs`: Orbital movement, aiming, weapon selection (Laser Cannon, Railgun, Disposable Mine), Overload activation, and unified resource tracking/HUD.
+- `Player_controller.cs`: Orbital movement, aiming, weapon selection (Laser Cannon, Railgun, Disposable Mine), Overload activation, unified resource tracking, and Earth impact damage drain.
 - `Bullet.cs`: Base projectile class handling velocity, collision, and damage.
 - `RailgunBullet.cs`: Penetrating high-speed projectile with pierce count (Pierce = 1) and armor-bypass capability against Tanky/Magnet meteors.
 - `DisposableMine.cs`: Deployable mine script managing slow travel to mouse position, dynamic radius scaling over time, shoot-to-detonate trigger, and explosion blast.
 - `ChainLightningBeam.cs`: (Utility/VFX) Procedural electric beam and fade-out trail renderer.
 - `Rock.cs`: Meteor base script with polymorphic/configured variants:
-  - Tracks HP, speed, size, and immunity flags (`immuneToNormalFire`).
+  - Tracks HP, speed, size, threat value, earth impact drain, and immunity flags (`immuneToNormalFire`).
   - Handles death effects: standard damage explosion vs Magnet implosion vortex.
   - Computes dynamic explosion radius based on body size ($2.5\times$ or $1.5\times$ body size).
-- `ComboManager.cs`: Singleton managing the 2.0s decay window, +0.5s extension per 15 combo, chain resource formulas, Overload threshold tracking, and UI display.
-- `AsteroidSpawner.cs`: 360-degree wave spawner managing weighted spawn rates of Normal, Speedy, Tanky, and Magnet meteors in spaced chunks.
+  - Handles `HitEarth()`: drains player resources and triggers game over when resources hit 0.
+- `ComboManager.cs`: Singleton managing the 2.0s decay window, +0.5s extension per 15 combo, chain resource formulas, Overload threshold tracking, and Game Over UI.
+- `AsteroidSpawner.cs`: 360-degree wave spawner managing threat gating, early game swarm scaling, paced enemy introductions, and pre-wave directional indicators.
 
 ---
 
@@ -154,18 +174,23 @@ All weapons consume a shared **Resource Pool** earned from destroying meteors.
 - [x] Chain Lightning secondary beam with cooldown and procedural electric visuals.
 - [x] **Transition to Unified Resource Economy:** Replace isolated ammo counts with a single Resource pool.
 - [x] **Implement 4 Meteor Types (`Rock.cs`):**
-  - [x] Normal (Medium, 2.5x blast, 7 base, $5 + \text{combo}/2$).
-  - [x] Speedy (Fast, small, 1.5x blast, 3 base, $10 + \text{combo}/2$).
-  - [x] Tanky (Slow, large, normal-fire immune, 5 base, $7 + \text{combo}/2$).
-  - [x] Magnet (Slow, medium, normal-fire immune, 5x vortex pull on death, 8 base, $15 + \text{combo}/2$).
+  - [x] Normal (Threat 1.0, Medium, 2.5x blast, 7 base, $5 + \text{combo}/2$, Drain: 20, 3 visual variants).
+  - [x] Speedy (Threat 1.5, Fast, small, 1.5x blast, 3 base, $10 + \text{combo}/2$, Drain: 30).
+  - [x] Tanky (Threat 2.0, Slow, large, normal-fire immune, 5 base, $7 + \text{combo}/2$, Drain: 40).
+  - [x] Magnet (Threat 3.0, Slow, medium, normal-fire immune, 5x vortex pull on death, 8 base, $15 + \text{combo}/2$, Drain: 60).
+- [x] **Paced Wave Progression & Threat Gating:**
+  - [x] Waves 1-3: Normal asteroids only, drastically increasing numbers (6 -> 12 -> 20).
+  - [x] Waves 4-6: Sequentially introduce Speedy, Tanky, Magnet with reduced spawn counts for learning.
+  - [x] Wave 7+: Endless mode with gradual count and threat escalation.
+- [x] **Resource Drain Earth Defense Condition:**
+  - [x] Asteroid impact on Earth drains player's Resource Pool.
+  - [x] Game Over triggers when resources reach 0 from an impact.
 - [x] **Chain Combo System Upgrade (`ComboManager.cs`):**
   - [x] 2.0s base decay window + 0.5s extension per 15 combo.
   - [x] Dynamic chain resource calculation formulas based on destroyed meteor type.
 - [x] **Overload System:**
   - [x] Combo milestone charge gauge.
   - [x] Activation key trigger for unlimited free firing duration.
-- [x] **Endless Mode & Instant Game Over:**
-  - [x] Instant Game Over when any meteor impacts Earth's surface.
 - [x] **Weapon Arsenal Expansion:**
   - [x] Laser Cannon (Cost: 10, Pierce: 0, Medium speed).
   - [x] Railgun (Cost: 25, Pierce: 1, High speed, destroys Tanky/Magnet).

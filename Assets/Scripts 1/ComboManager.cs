@@ -28,7 +28,7 @@ public class ComboManager : MonoBehaviour
         {
             if (_instance == null)
             {
-                _instance = FindFirstObjectByType<ComboManager>();
+                _instance = FindAnyObjectByType<ComboManager>();
                 if (_instance == null)
                 {
                     GameObject go = new GameObject("ComboManager");
@@ -277,7 +277,7 @@ public class ComboManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Sudden death trigger when ANY asteroid / meteor impacts Earth.
+    /// Triggered when asteroid impacts deplete Earth's resource pool to 0.
     /// Freezes gameplay and shows Game Over banner.
     /// </summary>
     public void TriggerGameOver()
@@ -286,7 +286,7 @@ public class ComboManager : MonoBehaviour
         isGameOver = true;
 
         Time.timeScale = 0f;
-        Debug.LogWarning("[Game Over] Sudden Death! An asteroid impacted Earth. Final Hits: " + totalComboHits);
+        Debug.LogWarning("[Game Over] Earth defenses collapsed! Resource pool depleted to 0 from asteroid impacts. Final Hits: " + totalComboHits);
         OnGameOver?.Invoke();
     }
 
@@ -516,7 +516,7 @@ public class ComboManager : MonoBehaviour
             alignment = TextAnchor.MiddleCenter
         };
         descStyle.normal.textColor = new Color(0.9f, 0.9f, 0.9f);
-        GUI.Label(new Rect(x, y + 65, modalWidth, 24), "Sudden Death: An asteroid collided with Earth!", descStyle);
+        GUI.Label(new Rect(x, y + 65, modalWidth, 24), "Earth Defenses Depleted: Resources reached 0 from asteroid impacts!", descStyle);
 
         GUIStyle statStyle = new GUIStyle(GUI.skin.label)
         {
