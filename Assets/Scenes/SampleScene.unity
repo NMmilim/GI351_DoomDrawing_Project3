@@ -128,6 +128,14 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: maxChunkSize
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: minChunkSize
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
       propertyPath: maxSpawnRadius
       value: 37.8
       objectReference: {fileID: 0}
@@ -187,6 +195,10 @@ PrefabInstance:
       propertyPath: 'tankyMeteor.sprites.Array.data[0]'
       value: 
       objectReference: {fileID: -1171411547549454312, guid: b5fab93718830c341bfc539961520f21, type: 3}
+    - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
+      propertyPath: speedyMeteor.blastRadiusMultiplier
+      value: 2.5
+      objectReference: {fileID: 0}
     - target: {fileID: -121156924708606712, guid: 2c8c06dd1c52df7418cf80e8024716fc, type: 3}
       propertyPath: 'speedyMeteor.sprites.Array.data[0]'
       value: 
