@@ -202,3 +202,28 @@ To ensure a smooth learning curve, enemy variety is gated across waves rather th
   - [x] Asteroids Destroyed (Total count & breakdown: Normal, Speedy, Tanky, Magnet).
   - [x] Peak Combo Streak & Highest Rank achieved, Survival Time, Overload count.
   - [x] Interactive clickable GUI buttons & hotkeys: [R] Retry, [M] Main Menu, [ESC] Quit.
+
+---
+
+## 5. Current Pivot: Sandbox Domino-Chain Reaction Prototype (Big Boss Requirements)
+
+*Feedback from project review / Big Boss directives:*
+
+### 5.1 Temporary Mechanic Pivots & Shelved Features
+- **Shelve Direct AoE Explosions:** Temporarily disable/shelve the direct radius explosion damage on meteor destruction.
+- **Fragment / Debris Projectile Spawning (สะเก็ดอุกกาบาต):**
+  - Upon destruction, a meteor spawns **2–5 debris projectiles** (can reuse projectile/bullet behavior or prefab).
+  - Debris shoots outward in random directions.
+  - When debris strikes another meteor, it destroys it and triggers further fragment spawns, generating a visible **cascading domino chain reaction**.
+- **Simplify Enemy Types:**
+  - Shelve all special meteor variants (Speedy, Tanky, Magnet) for now.
+  - Restrict spawning strictly to **Normal Meteors** (Threat 1.0).
+
+### 5.2 Sandbox Mode & Mass Swarm Test Bed
+- **Sandbox / God Mode:**
+  - When asteroids impact Earth, the player does not die / resources do not trigger Game Over (safe testing sandbox).
+- **Massive Snail-Pace Swarm:**
+  - Asteroids spawn in large clusters of **20–30 meteors at a time**.
+  - Meteor movement speed is drastically reduced to a crawl ("snail pace").
+  - Purpose: Purely to stress-test and visually showcase the domino chain reaction effect.
+
