@@ -217,7 +217,6 @@ public class DisposableMine : MonoBehaviour
             rock.Push(pushDir * (explosionForce * Mathf.Lerp(0.6f, 1.3f, falloff)));
 
             // Mine explosion is an explosion -> passes isExplosionOrPiercing = true (damages Tanky & Magnet!)
-            ComboManager.RegisterHit();
             rock.TakeDamage(explosionDamage, isExplosionOrPiercing: true);
         }
 

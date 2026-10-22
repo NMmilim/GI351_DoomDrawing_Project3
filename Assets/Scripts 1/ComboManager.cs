@@ -95,6 +95,8 @@ public class ComboManager : MonoBehaviour
     [Header("On-Screen Display")]
     [Tooltip("Render sleek combo, overload, and game-over UI on screen.")]
     [SerializeField] private bool showOnScreenUI = true;
+    [Tooltip("Log every kill/chain calculation to the Console. Keep OFF for large swarms (Debug.Log is expensive).")]
+    [SerializeField] private bool verboseLogging = false;
 
     // Events
     public static event Action<ComboGrade, int> OnComboUpdated; // (currentGrade, totalHits)
@@ -283,7 +285,7 @@ public class ComboManager : MonoBehaviour
 
             currentScore += baseThreatScore;
 
-            Debug.Log($"[Combo] Chain started with {meteorType}! Kill 1 -> Earned {earned} base resources. Timer: {remainingTime:F1}s");
+            if (verboseLogging) Debug.Log($"[Combo] Chain started with {meteorType}! Kill 1 -> Earned {earned} base resources. Timer: {remainingTime:F1}s");
         }
         else
         {
@@ -302,7 +304,7 @@ public class ComboManager : MonoBehaviour
             int pts = Mathf.RoundToInt(baseThreatScore * comboMultiplier);
             currentScore += pts;
 
-            Debug.Log($"[Combo] Chain Kill #{totalComboHits} ({meteorType})! Combo {comboIndex} -> Earned {earned} resources ({baseChainCost} + {chainBonus}). Timer: {remainingTime:F1}s");
+            if (verboseLogging) Debug.Log($"[Combo] Chain Kill #{totalComboHits} ({meteorType})! Combo {comboIndex} -> Earned {earned} resources ({baseChainCost} + {chainBonus}). Timer: {remainingTime:F1}s");
         }
 
         // Update peak combo and highest grade reached
@@ -565,30 +567,16 @@ public class ComboManager : MonoBehaviour
         GUI.Box(new Rect(x, y, cardWidth, cardHeight), GUIContent.none);
 
         // Grade label
-        GUIStyle gradeStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 36,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter
-        };
+        GUIStyle gradeStyle = HudStyles.Label(36, FontStyle.Bold, TextAnchor.MiddleCenter);
         gradeStyle.normal.textColor = GetGradeColor(currentGrade);
         GUI.Label(new Rect(x + 10, y + 8, 60, 48), isComboActive ? GetGradeString(currentGrade) : "-", gradeStyle);
 
         // Combo hits label
-        GUIStyle textStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 18,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleLeft
-        };
+        GUIStyle textStyle = HudStyles.Label(18, FontStyle.Bold, TextAnchor.MiddleLeft);
         textStyle.normal.textColor = Color.white;
         GUI.Label(new Rect(x + 80, y + 10, 150, 24), $"{totalComboHits} Hits", textStyle);
 
-        GUIStyle subStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 11,
-            alignment = TextAnchor.MiddleLeft
-        };
+        GUIStyle subStyle = HudStyles.Label(11, FontStyle.Normal, TextAnchor.MiddleLeft);
         subStyle.normal.textColor = new Color(0.8f, 0.8f, 0.8f);
         GUI.Label(new Rect(x + 80, y + 32, 150, 18), "CHAIN COMBO", subStyle);
 
@@ -605,11 +593,7 @@ public class ComboManager : MonoBehaviour
         GUI.DrawTexture(barFill, Texture2D.whiteTexture);
 
         GUI.color = Color.white;
-        GUIStyle timerTextStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 10,
-            alignment = TextAnchor.MiddleCenter
-        };
+        GUIStyle timerTextStyle = HudStyles.Label(10, FontStyle.Normal, TextAnchor.MiddleCenter);
         timerTextStyle.normal.textColor = Color.white;
         string timerStr = isComboActive ? $"{remainingTime:F1}s / {activeMax:F1}s" : "0.0s";
         GUI.Label(barBg, timerStr, timerTextStyle);
@@ -638,11 +622,8 @@ public class ComboManager : MonoBehaviour
         GUI.Label(ovBg, ovText, timerTextStyle);
 
         // Subtitle status
-        GUIStyle statusStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 10,
-            alignment = TextAnchor.MiddleCenter
-        };
+        // Same cached instance as timerTextStyle (identical params): safe because timerTextStyle's last use is above
+        GUIStyle statusStyle = HudStyles.Label(10, FontStyle.Normal, TextAnchor.MiddleCenter);
         statusStyle.normal.textColor = isOverloadActive ? new Color(1f, 0.9f, 0.3f) : new Color(0.7f, 0.7f, 0.7f);
         string bottomInfo = isOverloadActive ? "ALL WEAPONS FREE!" : (isOverloadReady ? "Press SPACE / SHIFT" : $"Earned: {totalResourcesEarned} Res");
         GUI.Label(new Rect(x + 15, y + 104, cardWidth - 30, 18), bottomInfo, statusStyle);
@@ -668,31 +649,17 @@ public class ComboManager : MonoBehaviour
         GUI.Box(new Rect(x, y, modalWidth, modalHeight), GUIContent.none);
 
         // Header Title: "MISSION FAILED"
-        GUIStyle titleStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 28,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter
-        };
+        GUIStyle titleStyle = HudStyles.Label(28, FontStyle.Bold, TextAnchor.MiddleCenter);
         titleStyle.normal.textColor = new Color(1f, 0.25f, 0.25f);
         GUI.Label(new Rect(x, y + 14, modalWidth, 34), "MISSION FAILED", titleStyle);
 
         // Subtitle: "EARTH DEFENSES DESTROYED"
-        GUIStyle subTitleStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 13,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter
-        };
+        GUIStyle subTitleStyle = HudStyles.Label(13, FontStyle.Bold, TextAnchor.MiddleCenter);
         subTitleStyle.normal.textColor = new Color(1f, 0.75f, 0.25f);
         GUI.Label(new Rect(x, y + 46, modalWidth, 20), "EARTH DEFENSES COLLAPSED", subTitleStyle);
 
         // Cause of defeat
-        GUIStyle causeStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 11,
-            alignment = TextAnchor.MiddleCenter
-        };
+        GUIStyle causeStyle = HudStyles.Label(11, FontStyle.Normal, TextAnchor.MiddleCenter);
         causeStyle.normal.textColor = new Color(0.85f, 0.85f, 0.85f);
         string causeStr = !string.IsNullOrEmpty(gameOverCause) ? gameOverCause : "Resources drained to 0 from asteroid impacts";
         GUI.Label(new Rect(x, y + 66, modalWidth, 18), $"Cause: {causeStr}", causeStyle);
@@ -703,30 +670,16 @@ public class ComboManager : MonoBehaviour
         Rect scoreBoxRect = new Rect(x + 20f, scoreBoxY, modalWidth - 40f, scoreBoxH);
         GUI.Box(scoreBoxRect, GUIContent.none);
 
-        GUIStyle scoreStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 20,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleLeft
-        };
+        GUIStyle scoreStyle = HudStyles.Label(20, FontStyle.Bold, TextAnchor.MiddleLeft);
         scoreStyle.normal.textColor = new Color(1f, 0.88f, 0.25f);
         GUI.Label(new Rect(x + 35f, scoreBoxY + 6f, 260f, 24), $"FINAL SCORE: {currentScore:N0}", scoreStyle);
 
-        GUIStyle highScoreStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 13,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleRight
-        };
+        GUIStyle highScoreStyle = HudStyles.Label(13, FontStyle.Bold, TextAnchor.MiddleRight);
         highScoreStyle.normal.textColor = isNewHighScore ? new Color(0.3f, 1f, 0.5f) : new Color(0.8f, 0.85f, 0.9f);
         string hsText = isNewHighScore ? "★ NEW BEST HIGH SCORE! ★" : $"ALL-TIME BEST: {highScore:N0}";
         GUI.Label(new Rect(x + modalWidth - 300f, scoreBoxY + 8f, 265f, 20), hsText, highScoreStyle);
 
-        GUIStyle scoreSubStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 10,
-            alignment = TextAnchor.MiddleLeft
-        };
+        GUIStyle scoreSubStyle = HudStyles.Label(10, FontStyle.Normal, TextAnchor.MiddleLeft);
         scoreSubStyle.normal.textColor = new Color(0.7f, 0.7f, 0.7f);
         GUI.Label(new Rect(x + 35f, scoreBoxY + 28f, modalWidth - 70f, 16), "Earned from asteroid threat eliminations, combo multiplier chains, and cleared waves", scoreSubStyle);
 
@@ -739,18 +692,13 @@ public class ComboManager : MonoBehaviour
         Rect leftColRect = new Rect(x + 20f, colY, colW, colH);
         GUI.Box(leftColRect, GUIContent.none);
 
-        GUIStyle colHeaderStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 12,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleLeft
-        };
+        GUIStyle colHeaderStyle = HudStyles.Label(12, FontStyle.Bold, TextAnchor.MiddleLeft);
         colHeaderStyle.normal.textColor = new Color(0.35f, 0.85f, 1f);
         GUI.Label(new Rect(leftColRect.x + 12f, colY + 8f, colW - 24f, 18), "MISSION PROGRESSION", colHeaderStyle);
 
-        GUIStyle statLabelStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, alignment = TextAnchor.MiddleLeft };
+        GUIStyle statLabelStyle = HudStyles.Label(11, FontStyle.Normal, TextAnchor.MiddleLeft);
         statLabelStyle.normal.textColor = new Color(0.85f, 0.85f, 0.85f);
-        GUIStyle statValStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleRight };
+        GUIStyle statValStyle = HudStyles.Label(11, FontStyle.Bold, TextAnchor.MiddleRight);
         statValStyle.normal.textColor = Color.white;
 
         float rowY = colY + 30f;
@@ -804,23 +752,25 @@ public class ComboManager : MonoBehaviour
         rowY += rowH;
 
         // Breakdown sublabels
-        GUIStyle subBreakdown = new GUIStyle(GUI.skin.label) { fontSize = 10 };
+        GUIStyle subBreakdown = HudStyles.Label(10);
         subBreakdown.normal.textColor = new Color(0.75f, 0.75f, 0.75f);
+        GUIStyle subBreakdownRight = HudStyles.Label(10, FontStyle.Normal, TextAnchor.MiddleRight);
+        subBreakdownRight.normal.textColor = new Color(0.75f, 0.75f, 0.75f);
 
         GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 28f, 16), "• Normal (Threat 1.0):", subBreakdown);
-        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{normalDestroyed}", new GUIStyle(subBreakdown) { alignment = TextAnchor.MiddleRight });
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{normalDestroyed}", subBreakdownRight);
         rowY += 17f;
 
         GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 28f, 16), "• Speedy (Threat 1.5):", subBreakdown);
-        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{speedyDestroyed}", new GUIStyle(subBreakdown) { alignment = TextAnchor.MiddleRight });
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{speedyDestroyed}", subBreakdownRight);
         rowY += 17f;
 
         GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 28f, 16), "• Tanky (Threat 2.0):", subBreakdown);
-        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{tankyDestroyed}", new GUIStyle(subBreakdown) { alignment = TextAnchor.MiddleRight });
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{tankyDestroyed}", subBreakdownRight);
         rowY += 17f;
 
         GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 28f, 16), "• Magnet (Threat 3.0):", subBreakdown);
-        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{magnetDestroyed}", new GUIStyle(subBreakdown) { alignment = TextAnchor.MiddleRight });
+        GUI.Label(new Rect(rightColRect.x + 16f, rowY, colW - 32f, 16), $"{magnetDestroyed}", subBreakdownRight);
         rowY += 21f;
 
         // Total Resources Harvested

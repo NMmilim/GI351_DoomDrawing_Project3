@@ -93,7 +93,6 @@ public class Bullet_Ricochet : Bullet
         if (rock != null)
         {
             rock.TakeDamage(damage);
-            ComboManager.RegisterHit();
         }
 
         last_hit = target;

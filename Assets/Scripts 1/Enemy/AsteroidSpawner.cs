@@ -733,12 +733,7 @@ public class AsteroidSpawner : MonoBehaviour
 
         GUI.Box(new Rect(x, y, bannerWidth, bannerHeight), GUIContent.none);
 
-        GUIStyle waveStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 17,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter
-        };
+        GUIStyle waveStyle = HudStyles.Label(17, FontStyle.Bold, TextAnchor.MiddleCenter);
 
         string statusText;
         if (currentState == SpawnerState.Intermission)
@@ -755,22 +750,10 @@ public class AsteroidSpawner : MonoBehaviour
 
         GUI.Label(new Rect(x, y + 3, bannerWidth, 22), statusText, waveStyle);
 
-        GUIStyle subStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 11,
-            alignment = TextAnchor.MiddleCenter
-        };
-
         string threatDesc = GetWaveThreatDescription(currentWave);
-        if (currentWave >= 4 && currentWave <= 6)
-        {
-            subStyle.normal.textColor = new Color(1f, 0.8f, 0.2f);
-            subStyle.fontStyle = FontStyle.Bold;
-        }
-        else
-        {
-            subStyle.normal.textColor = new Color(0.85f, 0.85f, 0.85f);
-        }
+        bool isIntroWave = currentWave >= 4 && currentWave <= 6;
+        GUIStyle subStyle = HudStyles.Label(11, isIntroWave ? FontStyle.Bold : FontStyle.Normal, TextAnchor.MiddleCenter);
+        subStyle.normal.textColor = isIntroWave ? new Color(1f, 0.8f, 0.2f) : new Color(0.85f, 0.85f, 0.85f);
 
         string subText;
         if (currentState == SpawnerState.Intermission)

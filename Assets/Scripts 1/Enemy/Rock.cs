@@ -94,11 +94,17 @@ public class Rock : MonoBehaviour
     [Tooltip("Optional visual effect prefab to instantiate at explosion position.")]
     [SerializeField] private GameObject explosionVFXPrefab;
 
+    [Header("Debug")]
+    [Tooltip("Log every hit/explosion to the Console. Keep OFF for large swarms: Debug.Log is expensive and causes hitches during chain reactions.")]
+    [SerializeField] private bool verboseLogging = false;
+
     private Rigidbody2D rb;
     private bool isDead = false;
     private float spawnTime = 0f;
     private bool hasAppliedConfig = false;
     private static readonly Collider2D[] nearbyColliders = new Collider2D[16];
+
+    public bool IsDead => isDead;
 
     public float EffectiveRadius => blastRadiusMultiplier * Mathf.Max(0.5f, transform.localScale.x);
 
@@ -122,7 +128,8 @@ public class Rock : MonoBehaviour
         spawnTime = Time.time;
 
         // Apply custom sprite if assigned on this prefab
-        if (customSprites != null && customSprites.Length > 0)
+        // (skipped when the spawner already picked a sprite in ApplyConfig, so it isn't overwritten)
+        if (!hasAppliedConfig && customSprites != null && customSprites.Length > 0)
         {
             Sprite chosen = customSprites[Random.Range(0, customSprites.Length)];
             if (chosen != null)
@@ -392,25 +399,36 @@ public class Rock : MonoBehaviour
     /// <summary>
     /// Applies damage to the meteor.
     /// If isExplosionOrPiercing is false, Tanky and Magnet meteors are immune!
+    /// Combo bookkeeping happens HERE so weapons don't need to call ComboManager themselves:
+    /// - Lethal damage  -> Die() -> ComboManager.RegisterMeteorKill (counts once).
+    /// - Non-lethal hit -> ComboManager.RegisterHit (if countsForCombo).
+    /// Returns true if this damage destroyed the meteor.
     /// </summary>
-    public void TakeDamage(int amount, bool isExplosionOrPiercing = false)
+    public bool TakeDamage(int amount, bool isExplosionOrPiercing = false, bool countsForCombo = true)
     {
-        if (isDead) return;
+        if (isDead) return false;
 
         // Check immunity against normal primary fire
         if (immuneToNormalFire && !isExplosionOrPiercing)
         {
-            Debug.Log($"[Rock] {name} ({meteorType}) is immune to normal Laser Cannon fire! Needs an explosion or piercing weapon.");
-            return;
+            if (verboseLogging) Debug.Log($"[Rock] {name} ({meteorType}) is immune to normal Laser Cannon fire! Needs an explosion or piercing weapon.");
+            return false;
         }
 
         hp -= amount;
-        Debug.Log($"{name} ({meteorType}) took {amount} damage, hp now {hp}");
+        if (verboseLogging) Debug.Log($"{name} ({meteorType}) took {amount} damage, hp now {hp}");
 
         if (hp <= 0)
         {
             Die();
+            return true;
         }
+
+        if (countsForCombo)
+        {
+            ComboManager.RegisterHit();
+        }
+        return false;
     }
 
     private void Die()
@@ -480,16 +498,11 @@ public class Rock : MonoBehaviour
             // Apply physical push impulse
             targetRock.Push(impulse);
 
-            if (explosionCountsForCombo)
-            {
-                ComboManager.RegisterHit();
-            }
-
             // Explosion damage can damage Tanky and Magnet meteors (isExplosionOrPiercing = true)
-            targetRock.TakeDamage(expDamage, isExplosionOrPiercing: true);
+            targetRock.TakeDamage(expDamage, isExplosionOrPiercing: true, countsForCombo: explosionCountsForCombo);
         }
 
-        Debug.Log($"[Rock] {name} ({meteorType}) exploded (Damage: {expDamage}, Radius: {radius:F1}, Targets: {targets.Count})");
+        if (verboseLogging) Debug.Log($"[Rock] {name} ({meteorType}) exploded (Damage: {expDamage}, Radius: {radius:F1}, Targets: {targets.Count})");
     }
 
     /// <summary>
@@ -531,7 +544,7 @@ public class Rock : MonoBehaviour
             }
         }
 
-        Debug.Log($"[Rock] Magnet Meteor {name} imploded! Vortex pulled {pulledCount} surrounding asteroids inward (Radius: {radius:F1}).");
+        if (verboseLogging) Debug.Log($"[Rock] Magnet Meteor {name} imploded! Vortex pulled {pulledCount} surrounding asteroids inward (Radius: {radius:F1}).");
     }
 
     /// <summary>
@@ -609,7 +622,7 @@ public class Rock : MonoBehaviour
         if (tag_match || layer_match)
         {
             Rock other = target.GetComponent<Rock>();
-            if (other != null) other.TakeDamage(damage, isExplosionOrPiercing: false);
+            if (other != null) other.TakeDamage(damage, isExplosionOrPiercing: false, countsForCombo: false);
         }
     }
 

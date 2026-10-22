@@ -14,6 +14,7 @@ public class Bullet : MonoBehaviour
 
     protected Rigidbody2D rb;
     protected float life_timer;   // timer instead of Destroy(gameObject, lifetime) so children can reset it
+    protected bool hasHit;        // Pierce 0: Destroy() is deferred to end of frame, so block a 2nd hit in the same physics step
 
     protected virtual void Start()
     {
@@ -31,35 +32,29 @@ public class Bullet : MonoBehaviour
     // Called when the bullet's collider is set to "Is Trigger" (passes through, no bounce)
     protected virtual void OnTriggerEnter2D(Collider2D other)
     {
-        if (CheckAmmoDrop(other.gameObject)) return;
-        if (CheckDisposableMine(other.gameObject)) return;
-
-        TryHit(other.gameObject);
-        Rock rock = other.gameObject.GetComponent<Rock>();
-        if (rock != null)
-        {
-            if (!rock.immuneToNormalFire)
-            {
-                ComboManager.RegisterHit();
-            }
-            rock.TakeDamage(damage, isExplosionOrPiercing: false);
-        }
+        HandleImpact(other.gameObject);
     }
 
     // Called when the bullet's collider is NOT a trigger (solid, physical hit)
     protected virtual void OnCollisionEnter2D(Collision2D collision)
     {
-        if (CheckAmmoDrop(collision.gameObject)) return;
-        if (CheckDisposableMine(collision.gameObject)) return;
+        HandleImpact(collision.gameObject);
+    }
 
-        TryHit(collision.gameObject);
-        Rock rock = collision.gameObject.GetComponent<Rock>();
+    private void HandleImpact(GameObject target)
+    {
+        if (hasHit) return;
+        if (CheckAmmoDrop(target)) { hasHit = true; return; }
+        if (CheckDisposableMine(target)) { hasHit = true; return; }
+
+        Rock rock = target.GetComponent<Rock>();
+        if (rock == null && !IsEnemy(target)) return;
+        hasHit = true;
+        Destroy(gameObject);
+
+        // Combo/kill bookkeeping is handled inside Rock.TakeDamage
         if (rock != null)
         {
-            if (!rock.immuneToNormalFire)
-            {
-                ComboManager.RegisterHit();
-            }
             rock.TakeDamage(damage, isExplosionOrPiercing: false);
         }
     }
@@ -93,13 +88,5 @@ public class Bullet : MonoBehaviour
         bool tag_match = target.CompareTag(enemy_tag);
         bool layer_match = (enemy_layers.value & (1 << target.layer)) != 0;
         return tag_match || layer_match;
-    }
-
-    protected void TryHit(GameObject target)
-    {
-        if (IsEnemy(target))
-        {
-            Destroy(gameObject);
-        }
     }
 }

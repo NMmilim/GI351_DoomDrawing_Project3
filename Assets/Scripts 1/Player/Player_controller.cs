@@ -89,6 +89,8 @@ public class Player_controller : MonoBehaviour
 
     [Tooltip("Show current resource and weapon HUD on screen.")]
     [SerializeField] private bool showAmmoHUD = true;
+    [Tooltip("Log every resource gain to the Console. Keep OFF during big chain reactions (Debug.Log is expensive).")]
+    [SerializeField] private bool verboseLogging = false;
 
     private float lightningCooldownTimer = 0f;
     private float currentAngle;
@@ -191,6 +193,9 @@ public class Player_controller : MonoBehaviour
 
     void Update()
     {
+        // Freeze all player input once the Game Over screen is up
+        if (ComboManager.Instance != null && ComboManager.Instance.IsGameOver) return;
+
         if (earthDamageAlertTimer > 0f)
         {
             earthDamageAlertTimer -= Time.deltaTime;
@@ -477,14 +482,11 @@ public class Player_controller : MonoBehaviour
             Rock rock = target.GetComponent<Rock>();
             if (rock != null)
             {
-                // Register combo hit
-                ComboManager.RegisterHit();
-
                 // Apply outward physical knockback impulse
                 Vector2 pushDir = ((Vector2)target.position - origin).normalized;
                 rock.Push(pushDir * lightningKnockback);
 
-                // Deal lightning damage
+                // Deal lightning damage (combo/kill bookkeeping handled inside Rock.TakeDamage)
                 rock.TakeDamage(lightningDamage);
             }
         }
@@ -501,7 +503,7 @@ public class Player_controller : MonoBehaviour
     public void AddResources(int amount)
     {
         resources += amount;
-        Debug.Log($"[Economy] +{amount} Resources! Current Pool: {resources}");
+        if (verboseLogging) Debug.Log($"[Economy] +{amount} Resources! Current Pool: {resources}");
     }
 
     /// <summary>
@@ -542,7 +544,8 @@ public class Player_controller : MonoBehaviour
         earthDamageAlertTimer = 2.0f;
         lastEarthDamageDrain = drainAmount;
 
-        Debug.LogWarning($"[Earth Impact] {rock.name} ({rock.meteorType}, Threat: {rock.threatValue}) struck Earth! Drained {drainAmount} resources. Remaining: {resources}");
+        string rockInfo = rock != null ? $"{rock.name} ({rock.meteorType}, Threat: {rock.threatValue})" : "Unknown asteroid";
+        Debug.LogWarning($"[Earth Impact] {rockInfo} struck Earth! Drained {drainAmount} resources. Remaining: {resources}");
 
         if (resources <= 0)
         {
@@ -593,23 +596,13 @@ public class Player_controller : MonoBehaviour
 
         GUI.Box(new Rect(x, y, cardWidth, cardHeight), GUIContent.none);
 
-        GUIStyle titleStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 11,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.UpperLeft
-        };
+        GUIStyle titleStyle = HudStyles.Label(11, FontStyle.Bold, TextAnchor.UpperLeft);
         titleStyle.normal.textColor = new Color(0.7f, 0.7f, 0.7f);
         GUI.Label(new Rect(x + 12, y + 6, cardWidth - 24, 16), "WEAPON ARSENAL & RESOURCES", titleStyle);
 
         // Unified Resources Pool Display
         bool isOverload = ComboManager.Instance != null && ComboManager.Instance.IsOverloadActive;
-        GUIStyle resStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 14,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleLeft
-        };
+        GUIStyle resStyle = HudStyles.Label(14, FontStyle.Bold, TextAnchor.MiddleLeft);
 
         if (earthDamageAlertTimer > 0f)
         {
@@ -643,12 +636,7 @@ public class Player_controller : MonoBehaviour
 
         // Secondary / Lightning indicator & cooldown at bottom
         float secY = y + 89f;
-        GUIStyle cdStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 11,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleLeft
-        };
+        GUIStyle cdStyle = HudStyles.Label(11, FontStyle.Bold, TextAnchor.MiddleLeft);
 
         if (lightningCooldownTimer > 0f)
         {
@@ -689,26 +677,18 @@ public class Player_controller : MonoBehaviour
             GUI.DrawTexture(r, Texture2D.whiteTexture);
         }
 
+        // Tint applies to the border only. Restore before drawing text, otherwise the label color
+        // gets multiplied by the border tint (unselected text ended up almost invisible).
         GUI.color = isSelected ? Color.cyan : new Color(0.45f, 0.45f, 0.45f, 0.7f);
         GUI.Box(r, GUIContent.none);
+        GUI.color = prev;
 
-        GUIStyle nameStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 10,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter
-        };
+        GUIStyle nameStyle = HudStyles.Label(10, FontStyle.Bold, TextAnchor.MiddleCenter);
         nameStyle.normal.textColor = isSelected ? Color.white : new Color(0.7f, 0.7f, 0.7f);
         GUI.Label(new Rect(r.x, r.y + 2f, r.width, 16f), slotName, nameStyle);
 
-        GUIStyle costStyle = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 9,
-            alignment = TextAnchor.MiddleCenter
-        };
+        GUIStyle costStyle = HudStyles.Label(9, FontStyle.Normal, TextAnchor.MiddleCenter);
         costStyle.normal.textColor = isSelected ? new Color(1f, 0.9f, 0.3f) : new Color(0.55f, 0.55f, 0.55f);
         GUI.Label(new Rect(r.x, r.y + 18f, r.width, 16f), cost, costStyle);
-
-        GUI.color = prev;
     }
 }

@@ -64,7 +64,6 @@ public class RailgunBullet : Bullet
         {
             // Armor-bypassing trait: passes isExplosionOrPiercing = true!
             // Tanky and Magnet meteors CANNOT resist the Railgun!
-            ComboManager.RegisterHit();
             rock.TakeDamage(damage, isExplosionOrPiercing: true);
 
             // Apply heavy physical knockback
@@ -89,7 +88,6 @@ public class RailgunBullet : Bullet
         Rock rock = collision.gameObject.GetComponent<Rock>();
         if (rock != null)
         {
-            ComboManager.RegisterHit();
             rock.TakeDamage(damage, isExplosionOrPiercing: true);
             rock.Push(transform.right * knockbackForce);
 
