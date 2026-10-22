@@ -94,6 +94,24 @@ public class Rock : MonoBehaviour
     [Tooltip("Optional visual effect prefab to instantiate at explosion position.")]
     [SerializeField] private GameObject explosionVFXPrefab;
 
+    [Header("Debris Chain Reaction (Big Boss Prototype)")]
+    [Tooltip("On death, shed shards in random directions instead of detonating. Each shard destroys the first meteor it hits, which sheds its own shards (domino chain). While ON, the area-of-effect explosion above is shelved (not deleted - untick this to bring it back).")]
+    [SerializeField] private bool spawnDebrisOnDeath = true;
+    [Tooltip("Minimum shards shed per destroyed meteor.")]
+    [SerializeField] private int debrisMinCount = 2;
+    [Tooltip("Maximum shards shed per destroyed meteor.")]
+    [SerializeField] private int debrisMaxCount = 5;
+    [Tooltip("Shard flight speed in units/second. Lower = easier to watch the chain ripple outward.")]
+    [SerializeField] private float debrisSpeed = 6f;
+    [Tooltip("Seconds before an unspent shard fizzles out. Reach = speed x lifetime.")]
+    [SerializeField] private float debrisLifetime = 1.1f;
+    [Tooltip("Damage each shard deals on impact (Normal meteors have 1 HP).")]
+    [SerializeField] private int debrisDamage = 1;
+    [Tooltip("How far from the meteor's center the shards start, so they clear the dying body.")]
+    [SerializeField] private float debrisSpawnOffset = 0.35f;
+    [Tooltip("Optional shard prefab (MeteorDebris is added automatically if missing). If empty, a small glowing shard using this meteor's own sprite is generated.")]
+    [SerializeField] private GameObject debrisPrefab;
+
     [Header("Debug")]
     [Tooltip("Log every hit/explosion to the Console. Keep OFF for large swarms: Debug.Log is expensive and causes hitches during chain reactions.")]
     [SerializeField] private bool verboseLogging = false;
@@ -273,6 +291,18 @@ public class Rock : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Overrides movement for the sandbox swarm: crawl speed, and weakened mutual repulsion.
+    /// Full-strength flocking repulsion would shove a packed swarm apart far faster than snail pace.
+    /// Call right after ApplyConfig (before Start reads initialInwardSpeed).
+    /// </summary>
+    public void ApplySwarmMovement(float inwardSpeed, float maxSpeed, float separationMultiplier)
+    {
+        initialInwardSpeed = inwardSpeed;
+        terminalVelocity = maxSpeed;
+        separationForce *= Mathf.Max(0f, separationMultiplier);
+    }
+
     [ContextMenu("Reset to Preset Defaults for MeteorType")]
     private void ContextMenuLoadDefaults()
     {
@@ -447,12 +477,60 @@ public class Rock : MonoBehaviour
         {
             EmitVortexPull();
         }
+        else if (spawnDebrisOnDeath)
+        {
+            SpawnDebris();
+        }
         else if (explodeOnDeath)
         {
             Explode();
         }
 
         Destroy(gameObject);
+    }
+
+    /// <summary>
+    /// Sheds debrisMinCount-debrisMaxCount shards in random outward directions.
+    /// Directions are spread around the circle with random jitter: random enough to look chaotic,
+    /// but shards never stack on top of each other and fly the same way.
+    /// </summary>
+    private void SpawnDebris()
+    {
+        int lo = Mathf.Max(0, Mathf.Min(debrisMinCount, debrisMaxCount));
+        int hi = Mathf.Max(lo, Mathf.Max(debrisMinCount, debrisMaxCount));
+        int count = Random.Range(lo, hi + 1);
+        if (count <= 0) return;
+
+        Vector2 origin = transform.position;
+
+        if (explosionVFXPrefab != null)
+        {
+            Instantiate(explosionVFXPrefab, origin, Quaternion.identity);
+        }
+
+        SpriteRenderer source = GetComponentInChildren<SpriteRenderer>();
+        float baseAngle = Random.Range(0f, 360f);
+        float slice = 360f / count;
+        float jitter = slice * 0.35f;
+
+        for (int i = 0; i < count; i++)
+        {
+            float angle = (baseAngle + i * slice + Random.Range(-jitter, jitter)) * Mathf.Deg2Rad;
+            Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+            Vector2 spawnPos = origin + dir * debrisSpawnOffset;
+
+            GameObject shard = debrisPrefab != null
+                ? Instantiate(debrisPrefab, spawnPos, Quaternion.identity)
+                : MeteorDebris.CreateProcedural(spawnPos, source);
+
+            MeteorDebris debris = shard.GetComponent<MeteorDebris>();
+            if (debris == null) debris = shard.AddComponent<MeteorDebris>();
+
+            // Slight speed variance so shards of one burst don't arrive in lock-step
+            debris.Launch(dir, debrisSpeed * Random.Range(0.85f, 1.15f), debrisLifetime, debrisDamage);
+        }
+
+        if (verboseLogging) Debug.Log($"[Rock] {name} ({meteorType}) shed {count} debris shards.");
     }
 
     /// <summary>
@@ -566,7 +644,7 @@ public class Rock : MonoBehaviour
         {
             Player_controller.Instance.DrainResourcesFromEarthImpact(earthImpactDrain, this);
         }
-        else if (ComboManager.Instance != null)
+        else if (ComboManager.Instance != null && !SandboxMode.Enabled)
         {
             ComboManager.Instance.TriggerGameOver($"Earth Breached by {meteorType} Asteroid");
         }

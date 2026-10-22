@@ -540,6 +540,15 @@ public class Player_controller : MonoBehaviour
     /// </summary>
     public void DrainResourcesFromEarthImpact(int drainAmount, Rock rock)
     {
+        // Sandbox / god mode: Earth is indestructible. Resources stay untouched and Game Over can't trigger,
+        // but the HUD still flashes so impacts are visible while testing.
+        if (SandboxMode.Enabled)
+        {
+            earthDamageAlertTimer = 2.0f;
+            lastEarthDamageDrain = 0;
+            return;
+        }
+
         resources = Mathf.Max(0, resources - drainAmount);
         earthDamageAlertTimer = 2.0f;
         lastEarthDamageDrain = drainAmount;
@@ -608,7 +617,9 @@ public class Player_controller : MonoBehaviour
         {
             float pulse = Mathf.PingPong(Time.time * 8f, 1f);
             resStyle.normal.textColor = Color.Lerp(new Color(1f, 0.2f, 0.1f), Color.yellow, pulse);
-            string alertText = $"EARTH HIT! -{lastEarthDamageDrain} RES  |  RESOURCES: {resources}";
+            string alertText = SandboxMode.Enabled
+                ? $"EARTH HIT! (SANDBOX - NO DAMAGE)"
+                : $"EARTH HIT! -{lastEarthDamageDrain} RES  |  RESOURCES: {resources}";
             GUI.Label(new Rect(x + 12, y + 23, cardWidth - 24, 20), alertText, resStyle);
         }
         else

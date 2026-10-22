@@ -232,6 +232,24 @@ public class AsteroidSpawner : MonoBehaviour
     [Tooltip("Angular spread in degrees of the chunk arc (e.g. 25-35 degrees).")]
     [SerializeField] private float chunkSpreadAngle = 30f;
 
+    [Header("Sandbox / Domino Test Bed (Big Boss Prototype)")]
+    [Tooltip("MASTER SWITCH. ON: Earth is indestructible (no resource drain, no Game Over) and every wave is one big snail-pace swarm for testing the chain reaction. OFF: the normal game.")]
+    [SerializeField] private bool sandboxMode = true;
+    [Tooltip("Spawn only Normal meteors. Speedy, Tanky and Magnet are shelved for now. Works with or without sandbox mode.")]
+    [SerializeField] private bool normalMeteorsOnly = true;
+    [Tooltip("Sandbox: minimum meteors per swarm.")]
+    [SerializeField] private int swarmMinCount = 20;
+    [Tooltip("Sandbox: maximum meteors per swarm.")]
+    [SerializeField] private int swarmMaxCount = 30;
+    [Tooltip("Sandbox: initial inward speed of swarm meteors (units/second). Snail pace.")]
+    [SerializeField] private float swarmInwardSpeed = 0.25f;
+    [Tooltip("Sandbox: top fall speed of swarm meteors (units/second). Snail pace.")]
+    [SerializeField] private float swarmMaxSpeed = 0.4f;
+    [Tooltip("Sandbox: minimum distance between meteors in the swarm. Smaller = denser = longer chains. Shard reach is roughly 6.6 units by default.")]
+    [SerializeField] private float swarmSpacing = 2.0f;
+    [Tooltip("Sandbox: scales the meteors' mutual repulsion (1 = normal, 0 = none). Kept low so a packed swarm isn't shoved apart faster than snail pace.")]
+    [Range(0f, 1f)] [SerializeField] private float swarmSeparationMultiplier = 0.1f;
+
     [Header("On-Screen HUD")]
     [SerializeField] private bool showWaveHUD = true;
 
@@ -244,6 +262,7 @@ public class AsteroidSpawner : MonoBehaviour
     private float waveTimer = 0f;
     private int spawnedInCurrentWave = 0;
     private int targetWaveCount = 0;
+    private int plannedWaveCount = 0;
     private float lastSpawnAngle = 0f;
     private float nextSpawnAngle = 0f;
     private readonly List<GameObject> activeAsteroids = new List<GameObject>();
@@ -273,6 +292,8 @@ public class AsteroidSpawner : MonoBehaviour
 
         if (earthCenter == null)
             earthCenter = transform;
+
+        SandboxMode.Enabled = sandboxMode;
     }
 
     private void Start()
@@ -316,7 +337,7 @@ public class AsteroidSpawner : MonoBehaviour
         // Indicators disappear when the wave starts!
         ClearIndicators();
 
-        targetWaveCount = CalculateWaveAsteroidCount(currentWave);
+        targetWaveCount = plannedWaveCount > 0 ? plannedWaveCount : CalculateWaveAsteroidCount(currentWave);
         spawnedInCurrentWave = 0;
         currentState = SpawnerState.Spawning;
 
@@ -331,7 +352,8 @@ public class AsteroidSpawner : MonoBehaviour
         while (spawnedInCurrentWave < targetWaveCount)
         {
             int remaining = targetWaveCount - spawnedInCurrentWave;
-            int chunkSize = UnityEngine.Random.Range(minChunkSize, maxChunkSize + 1);
+            // Sandbox: the whole wave arrives as ONE dense swarm instead of 3-5 meteor chunks
+            int chunkSize = sandboxMode ? remaining : UnityEngine.Random.Range(minChunkSize, maxChunkSize + 1);
             if (chunkSize > remaining)
             {
                 chunkSize = remaining;
@@ -372,44 +394,121 @@ public class AsteroidSpawner : MonoBehaviour
         Vector3 center = earthCenter != null ? earthCenter.position : Vector3.zero;
         lastSpawnAngle = chunkCenterAngle;
 
+        // Sandbox: one big dense cluster instead of a staggered arc
+        if (sandboxMode)
+        {
+            SpawnSwarm(chunkSize, chunkCenterAngle, center);
+            return;
+        }
+
         float baseRadius = UnityEngine.Random.Range(minSpawnRadius, maxSpawnRadius);
         List<Vector3> placedPositions = new List<Vector3>();
 
         for (int i = 0; i < chunkSize; i++)
         {
-            MeteorTypeConfig config = RollMeteorConfig();
-            GameObject prefabToSpawn = (config != null) ? config.GetSpawnPrefab() : null;
-            if (prefabToSpawn == null)
-            {
-                prefabToSpawn = fallbackAsteroidPrefab != null ? fallbackAsteroidPrefab : normalMeteor.GetSpawnPrefab();
-            }
-
-            if (prefabToSpawn == null)
-            {
-                Debug.LogWarning("[Spawner] No asteroid prefab assigned to spawn!");
-                continue;
-            }
-
             Vector3 spawnPos = CalculateChunkPosition(i, chunkSize, chunkCenterAngle, baseRadius, center, placedPositions);
+            if (SpawnAsteroidAt(spawnPos, false) == null) continue;
             placedPositions.Add(spawnPos);
-
-            GameObject asteroid = Instantiate(prefabToSpawn, spawnPos, Quaternion.identity);
-            Rock rock = asteroid.GetComponent<Rock>();
-            if (rock != null)
-            {
-                if (config != null)
-                {
-                    rock.ApplyConfig(config);
-                }
-                else
-                {
-                    rock.ApplyMeteorTypeConfiguration();
-                }
-            }
-            activeAsteroids.Add(asteroid);
         }
 
         Debug.Log($"[Spawner] Spawned chunk of {placedPositions.Count} asteroids at angle {chunkCenterAngle:F1}° (Base Radius: {baseRadius:F1})");
+    }
+
+    /// <summary>
+    /// Rolls a meteor type, instantiates it at the given position and applies its configuration.
+    /// Returns null if no prefab is available. snailSwarm applies the sandbox crawl-speed override.
+    /// </summary>
+    private GameObject SpawnAsteroidAt(Vector3 spawnPos, bool snailSwarm)
+    {
+        MeteorTypeConfig config = RollMeteorConfig();
+        GameObject prefabToSpawn = (config != null) ? config.GetSpawnPrefab() : null;
+        if (prefabToSpawn == null)
+        {
+            prefabToSpawn = fallbackAsteroidPrefab != null ? fallbackAsteroidPrefab : normalMeteor.GetSpawnPrefab();
+        }
+
+        if (prefabToSpawn == null)
+        {
+            Debug.LogWarning("[Spawner] No asteroid prefab assigned to spawn!");
+            return null;
+        }
+
+        GameObject asteroid = Instantiate(prefabToSpawn, spawnPos, Quaternion.identity);
+        Rock rock = asteroid.GetComponent<Rock>();
+        if (rock != null)
+        {
+            if (config != null)
+            {
+                rock.ApplyConfig(config);
+            }
+            else
+            {
+                rock.ApplyMeteorTypeConfiguration();
+            }
+
+            if (snailSwarm)
+            {
+                rock.ApplySwarmMovement(swarmInwardSpeed, swarmMaxSpeed, swarmSeparationMultiplier);
+            }
+        }
+
+        activeAsteroids.Add(asteroid);
+        return asteroid;
+    }
+
+    /// <summary>
+    /// Sandbox: spawns `count` meteors as one dense, roughly circular blob in the sector at centerAngle.
+    /// Rocks are packed at least swarmSpacing apart so each has several neighbors within shard reach.
+    /// </summary>
+    private void SpawnSwarm(int count, float centerAngle, Vector3 center)
+    {
+        // Size the blob so `count` rocks fit at swarmSpacing (hex packing needs ~0.87 area/rock, +20% slack)
+        float spacing = Mathf.Max(0.5f, swarmSpacing);
+        float blobRadius = Mathf.Sqrt(count * spacing * spacing * 0.87f / Mathf.PI) * 1.2f;
+
+        // Push the whole blob out so its nearest edge starts at minSpawnRadius
+        float rad = centerAngle * Mathf.Deg2Rad;
+        Vector3 blobCenter = center + new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0f) * (minSpawnRadius + blobRadius);
+
+        List<Vector3> placed = new List<Vector3>(count);
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 pos = FindSwarmPosition(blobCenter, blobRadius, spacing, placed);
+            if (SpawnAsteroidAt(pos, true) == null) continue;
+            placed.Add(pos);
+        }
+
+        Debug.Log($"[Spawner] SANDBOX swarm: {placed.Count} meteors in a blob of radius {blobRadius:F1} at angle {centerAngle:F0}");
+    }
+
+    /// <summary>
+    /// Random point inside the blob that keeps at least `spacing` from every placed meteor.
+    /// If the blob is too tight to fit another rock, it grows slightly until one fits.
+    /// </summary>
+    private static Vector3 FindSwarmPosition(Vector3 blobCenter, float blobRadius, float spacing, List<Vector3> placed)
+    {
+        float sqrSpacing = spacing * spacing;
+        float r = blobRadius;
+
+        for (int attempt = 0; attempt < 60; attempt++)
+        {
+            Vector3 candidate = blobCenter + (Vector3)(UnityEngine.Random.insideUnitCircle * r);
+
+            bool clear = true;
+            for (int i = 0; i < placed.Count; i++)
+            {
+                if (((Vector2)candidate - (Vector2)placed[i]).sqrMagnitude < sqrSpacing)
+                {
+                    clear = false;
+                    break;
+                }
+            }
+
+            if (clear) return candidate;
+            if (attempt % 15 == 14) r *= 1.15f;
+        }
+
+        return blobCenter + (Vector3)(UnityEngine.Random.insideUnitCircle * r);
     }
 
     /// <summary>
@@ -588,6 +687,8 @@ public class AsteroidSpawner : MonoBehaviour
     /// </summary>
     public MeteorTypeConfig RollMeteorConfig()
     {
+        // Speedy / Tanky / Magnet are shelved for the prototype
+        if (normalMeteorsOnly) return normalMeteor;
         if (!enablePacedIntroduction)
         {
             return RollFromWeights(
@@ -678,6 +779,7 @@ public class AsteroidSpawner : MonoBehaviour
 
     public string GetWaveThreatDescription(int wave)
     {
+        if (sandboxMode) return "SANDBOX: DOMINO SWARM TEST (EARTH INVINCIBLE)";
         if (!enablePacedIntroduction) return "ALL THREATS ACTIVE";
         switch (wave)
         {
@@ -696,6 +798,11 @@ public class AsteroidSpawner : MonoBehaviour
         currentState = SpawnerState.Intermission;
         waveTimer = duration;
 
+        // Decide the upcoming wave's size now so the HUD countdown shows a stable number
+        plannedWaveCount = sandboxMode
+            ? UnityEngine.Random.Range(Mathf.Min(swarmMinCount, swarmMaxCount), Mathf.Max(swarmMinCount, swarmMaxCount) + 1)
+            : CalculateWaveAsteroidCount(currentWave);
+
         // Choose incoming threat angle for the upcoming wave and display warning indicator!
         float angleOffset = UnityEngine.Random.Range(60f, 300f);
         nextSpawnAngle = (lastSpawnAngle + angleOffset) % 360f;
@@ -706,6 +813,12 @@ public class AsteroidSpawner : MonoBehaviour
     private void OnDestroy()
     {
         ClearIndicators();
+    }
+
+    // Lets you flip the Sandbox checkbox during Play Mode and see it take effect immediately
+    private void OnValidate()
+    {
+        if (Application.isPlaying) SandboxMode.Enabled = sandboxMode;
     }
 
     private void OnDrawGizmosSelected()
@@ -740,7 +853,7 @@ public class AsteroidSpawner : MonoBehaviour
         {
             float pulse = Mathf.PingPong(Time.time * 4f, 1f);
             waveStyle.normal.textColor = Color.Lerp(new Color(1f, 0.8f, 0.2f), new Color(1f, 0.3f, 0.15f), pulse);
-            statusText = $"Wave {currentWave} in {Mathf.CeilToInt(waveTimer)}s ({CalculateWaveAsteroidCount(currentWave)} Meteors)";
+            statusText = $"Wave {currentWave} in {Mathf.CeilToInt(waveTimer)}s ({plannedWaveCount} Meteors)";
         }
         else
         {

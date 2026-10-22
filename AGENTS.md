@@ -160,7 +160,10 @@ To ensure a smooth learning curve, enemy variety is gated across waves rather th
   - Computes dynamic explosion radius based on body size ($2.5\times$ or $1.5\times$ body size).
   - Handles `HitEarth()`: drains player resources and triggers game over when resources hit 0.
 - `ComboManager.cs`: Singleton managing the 2.0s decay window, +0.5s extension per 15 combo, chain resource formulas, Overload threshold tracking, and Game Over UI.
-- `AsteroidSpawner.cs`: 360-degree wave spawner managing threat gating, early game swarm scaling, paced enemy introductions, and pre-wave directional indicators.
+- `AsteroidSpawner.cs`: 360-degree wave spawner managing threat gating, early game swarm scaling, paced enemy introductions, and pre-wave directional indicators. Also hosts the Sandbox / Domino Test Bed switches (`sandboxMode`, `normalMeteorsOnly`, `swarm*` fields).
+- `MeteorDebris.cs`: Procedural debris shard spawned when a meteor dies. Flies straight with a swept `Physics2D.CircleCast` (no collider/Rigidbody), kills the first living `Rock` it touches, which spawns more shards (domino chain).
+- `SandboxMode.cs`: Static flag (`SandboxMode.Enabled`) set by `AsteroidSpawner`; makes Earth impacts harmless (no resource drain, no Game Over).
+- `HudStyles.cs`: Cached `GUIStyle` helper (`HudStyles.Label(size, fontStyle, alignment)`) used by all `OnGUI` HUD code to avoid per-frame GC allocations.
 
 ---
 
@@ -226,4 +229,35 @@ To ensure a smooth learning curve, enemy variety is gated across waves rather th
   - Asteroids spawn in large clusters of **20–30 meteors at a time**.
   - Meteor movement speed is drastically reduced to a crawl ("snail pace").
   - Purpose: Purely to stress-test and visually showcase the domino chain reaction effect.
+
+### 5.3 Implementation Status (Sandbox Prototype)
+
+> [!] Code written but **NOT yet play-tested in Unity** at the time of writing. No C# compiler is available outside Unity, so the first Unity Console check is the real verification. Tick the boxes below only after confirming in-editor.
+
+- [x] `Rock.Die()` spawns 2-5 debris shards (`spawnDebrisOnDeath`); AoE `Explode()` kept but shelved (`explodeOnDeath` off in sandbox flow).
+- [x] `MeteorDebris.cs` swept-cast shards that chain-kill other meteors.
+- [x] Normal-only spawning (`AsteroidSpawner.normalMeteorsOnly`).
+- [x] Sandbox/God mode: Earth impact does not drain resources or trigger Game Over (`SandboxMode.Enabled`).
+- [x] Snail-pace swarm: 20-30 meteors per wave in one dense blob (`swarmMinCount/MaxCount`, `swarmInwardSpeed`, `swarmMaxSpeed`, `swarmSpacing`).
+- [ ] Play-test confirmation: swarm spawns, cascade is visible, no Game Over on Earth hit, banner reads "SANDBOX: DOMINO SWARM TEST".
+- [ ] Commit new scripts **with their `.meta` files** (`HudStyles`, `SandboxMode`, `MeteorDebris`).
+
+**Restoring the normal game:** untick `sandboxMode` and `normalMeteorsOnly` on `AsteroidSpawner`, and untick `spawnDebrisOnDeath` on the Rock prefabs. Shelved meteor types and AoE code were not deleted.
+
+---
+
+## 6. Side Notes for Future Agents
+
+- **Language:** The user is a Thai student and asked for all conversation in **English**.
+- **Combo registration:** `Rock.TakeDamage(int, bool isExplosionOrPiercing=false, bool countsForCombo=true)` is the *single* place combo hits are registered. Never call `ComboManager.RegisterHit` from bullets/mines/beams (this caused a double-count bug before).
+- **GUI:** Use `HudStyles.Label(...)` in `OnGUI`; never `new GUIStyle` per frame. Normal-frame GUI GC is ~9.5 KB; the one-off 100 KB spike is first-frame font building.
+- **Logging:** Keep logs behind the `verboseLogging` toggles (Rock, ComboManager, Player_controller).
+- **`Random` ambiguity:** `AsteroidSpawner.cs` has `using System;`, so always write `UnityEngine.Random`.
+- **Unity 6 API:** Use `rb.linearVelocity`, not `rb.velocity`.
+- **Physics settings:** `QueriesHitTriggers` and `QueriesStartInColliders` are both on, and `MeteorDebris` relies on that.
+- **Scene facts:** Game scene is `SampleScene`, camera ortho size 15, spawn radius 11.5-13.5 (on-screen). Rock prefab `Normal_Variant_01`: layer 3, tag `Enemy`.
+- **Tuning knobs if the cascade looks wrong:** `debrisSpeed` (6), `debrisLifetime` (1.1), `debrisMin/MaxCount` on Rock; `swarmSpacing` (2.0), `swarmSeparationMultiplier` (0.1; rock flocking would otherwise push the packed blob apart faster than snail speed) on the spawner.
+- **Likely follow-ups:** raise `overloadThreshold` (20) because chains ramp combo quickly; optional sandbox free-fire / infinite resources; pool shards if 150+ cause hitches; custom debris prefab/VFX; fade trail on shard death.
+- **Honesty:** Don't claim a feature works until the user confirms in Unity. Ask them to paste Console errors.
+- **Off-topic:** The user may ask unrelated things (e.g. Minecraft modpacks). A handoff note exists in the Antigravity brain folder (`minecraft_modpack_handoff.md`); don't mix it into this project.
 
