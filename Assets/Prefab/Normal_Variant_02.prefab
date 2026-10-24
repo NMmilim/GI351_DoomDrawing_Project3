@@ -178,6 +178,8 @@ MonoBehaviour:
   baseChainCost: 5
   blastRadiusMultiplier: 2.5
   vortexPullForce: 22
+  threatValue: 1
+  earthImpactDrain: 20
   enemy_tag: Enemy
   enemy_layers:
     serializedVersion: 2
@@ -185,12 +187,15 @@ MonoBehaviour:
   damage: 1
   hp: 1
   maxhp: 1
+  retainExistingSprite: 1
+  customSprites: []
+  earthTransform: {fileID: 0}
   earthRadius: 2.35
   gravityStrength: 18
   outwardBrakeRate: 12
   minGravityDistance: 1.5
   terminalVelocity: 7
-  initialInwardSpeed: 1.5
+  initialInwardSpeed: 5
   randomTumbleSpeed: 35
   tangentialDamping: 1
   separationRadius: 2
@@ -202,3 +207,12 @@ MonoBehaviour:
   explosionForce: 12
   explosionCountsForCombo: 1
   explosionVFXPrefab: {fileID: 0}
+  spawnDebrisOnDeath: 1
+  debrisMinCount: 2
+  debrisMaxCount: 5
+  debrisSpeed: 6
+  debrisLifetime: 1.1
+  debrisDamage: 1
+  debrisSpawnOffset: 0.35
+  debrisPrefab: {fileID: 0}
+  verboseLogging: 0

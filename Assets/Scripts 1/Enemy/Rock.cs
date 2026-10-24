@@ -50,21 +50,23 @@ public class Rock : MonoBehaviour
     [Tooltip("Optional custom sprites for this meteor prefab. If assigned, one is randomly selected on start.")]
     [SerializeField] private Sprite[] customSprites;
 
-    [Header("Earth & Gravity Pull System")]
-    [Tooltip("Reference to Earth. If empty, automatically finds a GameObject named 'Earth' or defaults to (0,0).")]
+    [Header("Earth & Gravity Pull System (Injected by Spawner)")]
+    [Tooltip("Reference to Earth. Injected by AsteroidSpawner.")]
     [SerializeField] private Transform earthTransform;
     [Tooltip("Radius of Earth where impact occurs.")]
     [SerializeField] private float earthRadius = 2.35f;
-    [Tooltip("Base gravitational acceleration pulling the asteroid toward Earth.")]
-    [SerializeField] private float gravityStrength = 18f;
+    [Tooltip("Standard gravitational parameter G * M for Earth. Gravity a = (earthGravityGM / r^2). Injected by AsteroidSpawner.")]
+    [SerializeField] private float earthGravityGM = 260f;
+    [Tooltip("Minimum distance clamp for 1/r^2 gravity to prevent infinite acceleration near center.")]
+    [SerializeField] private float minGravityDistance = 2.35f;
     [Tooltip("Deceleration rate on outward velocity when pushed away, ensuring the asteroid stops and returns like an apple thrown in the sky.")]
-    [SerializeField] private float outwardBrakeRate = 12f;
-    [Tooltip("Distance threshold to prevent excessive gravity force right at Earth's center.")]
-    [SerializeField] private float minGravityDistance = 1.5f;
-    [Tooltip("Maximum fall speed toward Earth.")]
-    public float terminalVelocity = 7f;
+    [SerializeField] private float outwardBrakeRate = 10f;
+    [Tooltip("Maximum fall speed toward Earth (0 = uncapped). Injected by AsteroidSpawner.")]
+    public float terminalVelocity = 12f;
+    [Tooltip("Multiplier for gravitational acceleration on this rock.")]
+    public float gravityMultiplier = 1.0f;
 
-    [Header("Movement & Tumble")]
+    [Header("Movement & Tumble (Injected by Spawner)")]
     [Tooltip("Initial inward push speed toward Earth when the rock spawns.")]
     public float initialInwardSpeed = 1.5f;
     [Tooltip("Random initial rotational tumble speed in degrees per second.")]
@@ -72,7 +74,7 @@ public class Rock : MonoBehaviour
     [Tooltip("Damping on sideways (tangential) velocity over time so knocked asteroids always fall back toward Earth.")]
     [SerializeField] private float tangentialDamping = 1.0f;
 
-    [Header("Formation Separation & Anti-Collision")]
+    [Header("Formation Separation & Anti-Collision (Injected by Spawner)")]
     [Tooltip("Distance threshold within which nearby asteroids exert a gentle mutual repulsion force to maintain formation spacing.")]
     [SerializeField] private float separationRadius = 2.0f;
     [Tooltip("Strength of the gentle repulsion force between nearby asteroids.")]
@@ -133,68 +135,65 @@ public class Rock : MonoBehaviour
 
     private void Start()
     {
-        if (!hasAppliedConfig && autoConfigureStatsFromType && !useCustomStats)
-        {
-            ApplyMeteorTypeConfiguration();
-        }
-
-        if (hp <= 0 || (!hasAppliedConfig && !useCustomStats))
-        {
-            hp = maxhp;
-        }
-
         spawnTime = Time.time;
 
-        // Apply custom sprite if assigned on this prefab
-        // (skipped when the spawner already picked a sprite in ApplyConfig, so it isn't overwritten)
-        if (!hasAppliedConfig && customSprites != null && customSprites.Length > 0)
+        if (!hasAppliedConfig)
         {
-            Sprite chosen = customSprites[Random.Range(0, customSprites.Length)];
-            if (chosen != null)
+            if (autoConfigureStatsFromType && !useCustomStats)
             {
-                SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
-                if (sr != null) sr.sprite = chosen;
+                ApplyMeteorTypeConfiguration();
             }
-        }
 
-        if (earthTransform == null)
-        {
-            GameObject earthObj = GameObject.Find("Earth");
-            if (earthObj != null) earthTransform = earthObj.transform;
-        }
+            if (hp <= 0)
+            {
+                hp = maxhp;
+            }
 
-        Vector2 earthCenter = GetEarthCenter();
-        Vector2 toEarth = earthCenter - (Vector2)transform.position;
+            if (customSprites != null && customSprites.Length > 0)
+            {
+                ApplySpriteFromSprites(null);
+            }
 
-        // Apply initial inward velocity toward Earth
-        if (initialInwardSpeed > 0f && toEarth.sqrMagnitude > 0.01f)
-        {
-            rb.linearVelocity = toEarth.normalized * initialInwardSpeed;
-        }
+            if (earthTransform == null)
+            {
+                GameObject earthObj = GameObject.Find("Earth");
+                if (earthObj != null) earthTransform = earthObj.transform;
+            }
 
-        // Apply slight random space tumble
-        if (randomTumbleSpeed > 0f)
-        {
-            rb.angularVelocity = Random.Range(-randomTumbleSpeed, randomTumbleSpeed);
+            ApplyInitialVelocity();
         }
     }
 
     /// <summary>
-    /// Applies status configuration passed from AsteroidSpawner.
-    /// If useCustomStats is checked on this instance or prefab, its local inspector stats are preserved.
+    /// Master initialization called by AsteroidSpawner.
+    /// Injects all stats, speed, and real-world Earth gravity physics.
+    /// Rock functions as an info carriage executing AsteroidSpawner's settings.
     /// </summary>
-    public void ApplyConfig(AsteroidSpawner.MeteorTypeConfig config)
+    public void InitFromSpawner(AsteroidSpawner spawner, AsteroidSpawner.MeteorTypeConfig config, bool isSnailSwarm)
     {
         hasAppliedConfig = true;
-        if (config == null) return;
-        meteorType = config.type;
 
-        if (!useCustomStats)
+        if (spawner != null)
         {
+            earthTransform = spawner.EarthCenter;
+            earthRadius = spawner.EarthRadius;
+            earthGravityGM = spawner.EarthGravityGM;
+            minGravityDistance = spawner.MinGravityDistance;
+            outwardBrakeRate = spawner.OutwardBrakeRate;
+            tangentialDamping = spawner.TangentialDamping;
+            separationRadius = spawner.SeparationRadius;
+            separationForce = spawner.SeparationForce;
+            randomTumbleSpeed = spawner.RandomTumbleSpeed;
+        }
+
+        if (config != null)
+        {
+            meteorType = config.type;
             maxhp = config.maxHp;
             hp = maxhp;
             initialInwardSpeed = config.initialSpeed;
             terminalVelocity = config.terminalVelocity;
+            gravityMultiplier = config.gravityMultiplier;
             transform.localScale = Vector3.one * config.sizeScale;
             blastRadiusMultiplier = config.blastRadiusMultiplier;
             immuneToNormalFire = config.immuneToNormalFire;
@@ -203,17 +202,68 @@ public class Rock : MonoBehaviour
             vortexPullForce = config.vortexPullForce;
             threatValue = config.threatValue;
             earthImpactDrain = config.earthImpactDrain;
+
+            ApplySpriteFromSprites(config.sprites);
         }
 
-        // Pick and apply sprite from spawner config or rock's customSprites
-        Sprite chosenSprite = null;
-        if (config.sprites != null && config.sprites.Length > 0)
+        if (isSnailSwarm && spawner != null)
         {
-            chosenSprite = config.sprites[Random.Range(0, config.sprites.Length)];
+            initialInwardSpeed = spawner.SwarmInwardSpeed;
+            terminalVelocity = spawner.SwarmMaxSpeed;
+            gravityMultiplier = spawner.SwarmGravityScale;
+            separationForce *= spawner.SwarmSeparationMultiplier;
+        }
+
+        ApplyInitialVelocity();
+    }
+
+    /// <summary>
+    /// Updates physics settings live during play mode when values change on AsteroidSpawner.
+    /// </summary>
+    public void UpdatePhysicsSettings(Transform earthCenter, float earthRadius, float earthGravityGM, float minGravityDistance, float outwardBrakeRate, float tangentialDamping, float separationRadius, float separationForce)
+    {
+        this.earthTransform = earthCenter;
+        this.earthRadius = earthRadius;
+        this.earthGravityGM = earthGravityGM;
+        this.minGravityDistance = minGravityDistance;
+        this.outwardBrakeRate = outwardBrakeRate;
+        this.tangentialDamping = tangentialDamping;
+        this.separationRadius = separationRadius;
+        this.separationForce = separationForce;
+    }
+
+    /// <summary>
+    /// Applies starting inward velocity and tumble angular velocity.
+    /// </summary>
+    public void ApplyInitialVelocity()
+    {
+        if (rb == null) rb = GetComponent<Rigidbody2D>();
+        if (rb == null) return;
+
+        Vector2 earthCenter = GetEarthCenter();
+        Vector2 toEarth = earthCenter - (Vector2)transform.position;
+
+        if (initialInwardSpeed > 0f && toEarth.sqrMagnitude > 0.01f)
+        {
+            rb.linearVelocity = toEarth.normalized * initialInwardSpeed;
+        }
+
+        if (randomTumbleSpeed > 0f)
+        {
+            rb.angularVelocity = UnityEngine.Random.Range(-randomTumbleSpeed, randomTumbleSpeed);
+        }
+    }
+
+    private void ApplySpriteFromSprites(Sprite[] configSprites)
+    {
+        Sprite chosenSprite = null;
+        if (configSprites != null && configSprites.Length > 0)
+        {
+            chosenSprite = configSprites[UnityEngine.Random.Range(0, configSprites.Length)];
         }
         else if (customSprites != null && customSprites.Length > 0)
         {
-            chosenSprite = customSprites[Random.Range(0, customSprites.Length)];
+            chosenSprite = customSprites[UnityEngine.Random.Range(0, customSprites.Length)];
         }
 
         SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
@@ -224,6 +274,14 @@ public class Rock : MonoBehaviour
                 sr.sprite = chosenSprite;
             }
         }
+    }
+
+    /// <summary>
+    /// Applies status configuration passed from AsteroidSpawner (backward compatibility wrapper).
+    /// </summary>
+    public void ApplyConfig(AsteroidSpawner.MeteorTypeConfig config)
+    {
+        InitFromSpawner(AsteroidSpawner.Instance, config, false);
     }
 
     /// <summary>
@@ -243,7 +301,8 @@ public class Rock : MonoBehaviour
                 immuneToNormalFire = false;
                 maxhp = 1;
                 initialInwardSpeed = 1.5f;
-                terminalVelocity = 7.0f;
+                terminalVelocity = 12.0f;
+                gravityMultiplier = 1.0f;
                 threatValue = 1.0f;
                 earthImpactDrain = 20;
                 transform.localScale = Vector3.one * 1.0f;
@@ -255,8 +314,9 @@ public class Rock : MonoBehaviour
                 blastRadiusMultiplier = 1.5f;
                 immuneToNormalFire = false;
                 maxhp = 1;
-                terminalVelocity = 10.0f;
+                terminalVelocity = 16.0f;
                 initialInwardSpeed = 2.4f;
+                gravityMultiplier = 1.1f;
                 threatValue = 1.5f;
                 earthImpactDrain = 30;
                 transform.localScale = Vector3.one * 0.7f;
@@ -268,8 +328,9 @@ public class Rock : MonoBehaviour
                 blastRadiusMultiplier = 1.5f;
                 immuneToNormalFire = true; // Immune to normal Laser Cannon
                 maxhp = 3;
-                terminalVelocity = 4.5f;
+                terminalVelocity = 8.0f;
                 initialInwardSpeed = 1.2f;
+                gravityMultiplier = 0.9f;
                 threatValue = 2.0f;
                 earthImpactDrain = 40;
                 transform.localScale = Vector3.one * 1.5f;
@@ -282,8 +343,9 @@ public class Rock : MonoBehaviour
                 vortexPullForce = 22f;
                 immuneToNormalFire = true; // Immune to normal Laser Cannon
                 maxhp = 2;
-                terminalVelocity = 5.0f;
+                terminalVelocity = 9.0f;
                 initialInwardSpeed = 1.3f;
+                gravityMultiplier = 1.0f;
                 threatValue = 3.0f;
                 earthImpactDrain = 60;
                 transform.localScale = Vector3.one * 1.0f;
@@ -300,7 +362,9 @@ public class Rock : MonoBehaviour
     {
         initialInwardSpeed = inwardSpeed;
         terminalVelocity = maxSpeed;
+        gravityMultiplier = 0.05f;
         separationForce *= Mathf.Max(0f, separationMultiplier);
+        ApplyInitialVelocity();
     }
 
     [ContextMenu("Reset to Preset Defaults for MeteorType")]
@@ -326,18 +390,19 @@ public class Rock : MonoBehaviour
 
     /// <summary>
     /// Gravitational pull towards Earth:
-    /// Pulls the asteroid continuously toward Earth's center.
+    /// Uses real-world Newtonian inverse-square gravity: a = (G * M) / r^2.
+    /// Pulls the asteroid continuously toward Earth's center, accelerating smoothly as it falls closer.
     /// If knocked back outward, actively brakes outward velocity so it comes back down to Earth like an apple thrown in the sky.
     /// </summary>
     public void ApplyGravityPull()
     {
-        if (isDead) return;
+        if (isDead || rb == null) return;
 
         Vector2 earthCenter = GetEarthCenter();
         Vector2 toEarth = earthCenter - (Vector2)transform.position;
         float dist = toEarth.magnitude;
 
-        // Check if the asteroid has reached Earth's surface -> Sudden Death!
+        // Check if the asteroid has reached Earth's surface -> Sudden Death / Resource Drain!
         if (dist <= earthRadius)
         {
             HitEarth();
@@ -351,20 +416,26 @@ public class Rock : MonoBehaviour
         float radialSpeed = Vector2.Dot(currentVel, dirToEarth);
         Vector2 tangentialVel = currentVel - (dirToEarth * radialSpeed);
 
-        // Radial dynamics:
+        // Real-world Newtonian gravity: a = (G * M) / r^2
+        // Clamped at minGravityDistance (surface radius) to prevent division by zero / singularity
+        float r = Mathf.Max(dist, minGravityDistance);
+        float gravityAcc = (earthGravityGM / (r * r)) * gravityMultiplier;
+
         if (radialSpeed < 0f)
         {
             // Moving AWAY from Earth (e.g. knocked back by bullet, lightning, or explosion)
             // Brake outward speed rapidly via gravity pull + outwardBrakeRate so it slows, stops, and reverses
-            float brakeAcc = gravityStrength + outwardBrakeRate;
+            float brakeAcc = gravityAcc + outwardBrakeRate;
             radialSpeed += brakeAcc * Time.fixedDeltaTime;
         }
         else
         {
-            // Moving TOWARD Earth: accelerate up to terminal velocity
-            float proximityBoost = Mathf.Clamp(minGravityDistance / Mathf.Max(0.5f, dist), 0.8f, 1.8f);
-            float effectiveAcc = gravityStrength * proximityBoost;
-            radialSpeed = Mathf.Min(radialSpeed + effectiveAcc * Time.fixedDeltaTime, terminalVelocity);
+            // Moving TOWARD Earth: accelerate smoothly via real-world 1/r^2 gravity
+            radialSpeed += gravityAcc * Time.fixedDeltaTime;
+            if (terminalVelocity > 0f)
+            {
+                radialSpeed = Mathf.Min(radialSpeed, terminalVelocity);
+            }
         }
 
         // Damp sideways (tangential) velocity so it doesn't get stuck in wide orbits

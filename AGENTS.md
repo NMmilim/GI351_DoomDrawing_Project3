@@ -120,6 +120,10 @@ All weapons consume a shared **Resource Pool** earned from destroying meteors.
 
 ### 2.6 Spawning, Flight & Anti-Collision Formation
 - **Bulk Chunk Spawning (`AsteroidSpawner.cs`):** Meteors spawn in coordinated swarms (3-5 per chunk) arriving from designated sectors around Earth.
+- **Real-World Newtonian Inverse-Square Gravity:** Meteors experience true gravitational acceleration pulling them toward Earth:
+  $$a = \frac{G \cdot M}{r^2} \times \text{gravityMultiplier}$$
+  (where $r = \max(\text{dist}, r_{\min})$). Asteroids drift steadily at spawn distance and naturally accelerate into a rapid plunge as they approach Earth.
+- **Single Source of Truth (`AsteroidSpawner.cs`):** `AsteroidSpawner` is the central authority for all speeds (`initialSpeed`, `terminalVelocity`, `earthGravityGM`, `outwardBrakeRate`, `tangentialDamping`, `separationForce`, `separationRadius`). `Rock.cs` acts as an **info carriage** receiving and executing these values.
 - **Radial Depth Staggering (`radialDepthStep = 1.8f`):** Lead meteors spawn closer to Earth and experience higher gravitational pull ($a = \frac{G}{r^2}$), naturally pulling ahead of rear meteors to eliminate rear-end collisions during flight.
 - **Angular Spread & Clearance (`minSeparationDistance = 2.2f`):** Spread across a $30^\circ$ arc with enforced minimum spawn distance.
 - **Dynamic Flocking & Anti-Collision (`Rock.cs`):**
@@ -154,13 +158,14 @@ To ensure a smooth learning curve, enemy variety is gated across waves rather th
 - `RailgunBullet.cs`: Penetrating high-speed projectile with pierce count (Pierce = 1) and armor-bypass capability against Tanky/Magnet meteors.
 - `DisposableMine.cs`: Deployable mine script managing slow travel to mouse position, dynamic radius scaling over time, shoot-to-detonate trigger, and explosion blast.
 - `ChainLightningBeam.cs`: (Utility/VFX) Procedural electric beam and fade-out trail renderer.
-- `Rock.cs`: Meteor base script with polymorphic/configured variants:
-  - Tracks HP, speed, size, threat value, earth impact drain, and immunity flags (`immuneToNormalFire`).
-  - Handles death effects: standard damage explosion vs Magnet implosion vortex.
-  - Computes dynamic explosion radius based on body size ($2.5\times$ or $1.5\times$ body size).
-  - Handles `HitEarth()`: drains player resources and triggers game over when resources hit 0.
+- `Rock.cs`: Info carriage meteor script:
+  - Receives and executes all movement parameters (`initialInwardSpeed`, `terminalVelocity`, `earthGravityGM`, `gravityMultiplier`) and traits from `AsteroidSpawner`.
+  - Executes real-world Newtonian inverse-square gravity ($a = \frac{GM}{r^2}$).
+  - Tracks HP, size, threat value, earth impact drain, and immunity flags (`immuneToNormalFire`).
+  - Handles death effects: standard damage explosion vs Magnet implosion vortex vs debris shard shedding.
+  - Handles `HitEarth()`: drains player resources and triggers game over when resources hit 0 (unless in SandboxMode).
 - `ComboManager.cs`: Singleton managing the 2.0s decay window, +0.5s extension per 15 combo, chain resource formulas, Overload threshold tracking, and Game Over UI.
-- `AsteroidSpawner.cs`: 360-degree wave spawner managing threat gating, early game swarm scaling, paced enemy introductions, and pre-wave directional indicators. Also hosts the Sandbox / Domino Test Bed switches (`sandboxMode`, `normalMeteorsOnly`, `swarm*` fields).
+- `AsteroidSpawner.cs`: 360-degree wave spawner and single source of truth for all movement and gravitational physics (`earthGravityGM`, `minGravityDistance`, `outwardBrakeRate`, `tangentialDamping`, `separationRadius`, `separationForce`). Propagates live inspector updates to active asteroids during play. Also hosts the Sandbox / Domino Test Bed switches (`sandboxMode`, `useSwarmSnailSpeed`, `normalMeteorsOnly`, `swarm*` fields).
 - `MeteorDebris.cs`: Procedural debris shard spawned when a meteor dies. Flies straight with a swept `Physics2D.CircleCast` (no collider/Rigidbody), kills the first living `Rock` it touches, which spawns more shards (domino chain).
 - `SandboxMode.cs`: Static flag (`SandboxMode.Enabled`) set by `AsteroidSpawner`; makes Earth impacts harmless (no resource drain, no Game Over).
 - `HudStyles.cs`: Cached `GUIStyle` helper (`HudStyles.Label(size, fontStyle, alignment)`) used by all `OnGUI` HUD code to avoid per-frame GC allocations.

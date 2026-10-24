@@ -85,8 +85,11 @@ public class AsteroidSpawner : MonoBehaviour
         [Tooltip("Initial inward movement speed toward Earth.")]
         public float initialSpeed = 1.5f;
 
-        [Tooltip("Maximum fall velocity toward Earth.")]
-        public float terminalVelocity = 7.0f;
+        [Tooltip("Maximum fall velocity toward Earth. Set high (e.g. 50) for uncapped gravity fall.")]
+        public float terminalVelocity = 12.0f;
+
+        [Tooltip("Multiplier on Earth's gravitational acceleration for this meteor type (1 = standard).")]
+        public float gravityMultiplier = 1.0f;
 
         [Tooltip("Scale multiplier for body size.")]
         public float sizeScale = 1.0f;
@@ -124,7 +127,8 @@ public class AsteroidSpawner : MonoBehaviour
         spawnWeight = 50,
         maxHp = 1,
         initialSpeed = 1.5f,
-        terminalVelocity = 7.0f,
+        terminalVelocity = 12.0f,
+        gravityMultiplier = 1.0f,
         sizeScale = 1.0f,
         blastRadiusMultiplier = 2.5f,
         immuneToNormalFire = false,
@@ -141,7 +145,8 @@ public class AsteroidSpawner : MonoBehaviour
         spawnWeight = 25,
         maxHp = 1,
         initialSpeed = 2.4f,
-        terminalVelocity = 10.0f,
+        terminalVelocity = 16.0f,
+        gravityMultiplier = 1.1f,
         sizeScale = 0.7f,
         blastRadiusMultiplier = 1.5f,
         immuneToNormalFire = false,
@@ -158,7 +163,8 @@ public class AsteroidSpawner : MonoBehaviour
         spawnWeight = 15,
         maxHp = 3,
         initialSpeed = 1.2f,
-        terminalVelocity = 4.5f,
+        terminalVelocity = 8.0f,
+        gravityMultiplier = 0.9f,
         sizeScale = 1.5f,
         blastRadiusMultiplier = 1.5f,
         immuneToNormalFire = true,
@@ -175,7 +181,8 @@ public class AsteroidSpawner : MonoBehaviour
         spawnWeight = 10,
         maxHp = 2,
         initialSpeed = 1.3f,
-        terminalVelocity = 5.0f,
+        terminalVelocity = 9.0f,
+        gravityMultiplier = 1.0f,
         sizeScale = 1.0f,
         blastRadiusMultiplier = 5.0f,
         immuneToNormalFire = true,
@@ -232,19 +239,39 @@ public class AsteroidSpawner : MonoBehaviour
     [Tooltip("Angular spread in degrees of the chunk arc (e.g. 25-35 degrees).")]
     [SerializeField] private float chunkSpreadAngle = 30f;
 
+    [Header("Earth Gravitational Physics (Real-World Inverse-Square)")]
+    [Tooltip("Standard gravitational parameter (G * M) for Earth. Real-world gravity: a = (earthGravityGM / r^2). Lower = gentle drift, higher = rapid plunge.")]
+    [SerializeField] private float earthGravityGM = 260f;
+    [Tooltip("Minimum distance clamp for 1/r^2 gravity to prevent infinite acceleration near center. Defaults to Earth radius.")]
+    [SerializeField] private float minGravityDistance = 2.35f;
+    [Tooltip("Deceleration rate applied when an asteroid is knocked away from Earth so it slows and reverses.")]
+    [SerializeField] private float outwardBrakeRate = 10f;
+    [Tooltip("Damping on sideways (tangential) orbital velocity so asteroids fall inward rather than orbiting forever.")]
+    [SerializeField] private float tangentialDamping = 1.0f;
+    [Tooltip("Radius of Earth where impact occurs (if <= 0, auto-detected from Earth collider).")]
+    [SerializeField] private float earthRadius = 2.35f;
+
+    [Header("Flocking Formation Spacing")]
+    [Tooltip("Distance threshold within which nearby asteroids exert a gentle mutual repulsion force.")]
+    [SerializeField] private float separationRadius = 2.0f;
+    [Tooltip("Strength of the gentle repulsion force between nearby asteroids.")]
+    [SerializeField] private float separationForce = 15f;
+    [Tooltip("Random initial space tumble in degrees per second.")]
+    [SerializeField] private float randomTumbleSpeed = 35f;
+
     [Header("Sandbox / Domino Test Bed (Big Boss Prototype)")]
     [Tooltip("MASTER SWITCH. ON: Earth is indestructible (no resource drain, no Game Over) and every wave is one big snail-pace swarm for testing the chain reaction. OFF: the normal game.")]
     [SerializeField] private bool sandboxMode = true;
     [Tooltip("Spawn only Normal meteors. Speedy, Tanky and Magnet are shelved for now. Works with or without sandbox mode.")]
     [SerializeField] private bool normalMeteorsOnly = true;
-    [Tooltip("Sandbox: minimum meteors per swarm.")]
-    [SerializeField] private int swarmMinCount = 20;
-    [Tooltip("Sandbox: maximum meteors per swarm.")]
-    [SerializeField] private int swarmMaxCount = 30;
-    [Tooltip("Sandbox: initial inward speed of swarm meteors (units/second). Snail pace.")]
+    [Tooltip("When true in Sandbox, forces asteroids to crawl at snail speed. Set to FALSE if you want Sandbox testing with your custom meteor speeds!")]
+    [SerializeField] private bool useSwarmSnailSpeed = false;
+    [Tooltip("Sandbox: initial inward speed of swarm meteors when useSwarmSnailSpeed is true.")]
     [SerializeField] private float swarmInwardSpeed = 0.25f;
-    [Tooltip("Sandbox: top fall speed of swarm meteors (units/second). Snail pace.")]
+    [Tooltip("Sandbox: top fall speed of swarm meteors when useSwarmSnailSpeed is true.")]
     [SerializeField] private float swarmMaxSpeed = 0.4f;
+    [Tooltip("Sandbox: gravity scaling when useSwarmSnailSpeed is true so gravity doesn't accelerate the snail swarm.")]
+    [SerializeField] private float swarmGravityScale = 0.05f;
     [Tooltip("Sandbox: minimum distance between meteors in the swarm. Smaller = denser = longer chains. Shard reach is roughly 6.6 units by default.")]
     [SerializeField] private float swarmSpacing = 2.0f;
     [Tooltip("Sandbox: scales the meteors' mutual repulsion (1 = normal, 0 = none). Kept low so a packed swarm isn't shoved apart faster than snail pace.")]
@@ -283,6 +310,22 @@ public class AsteroidSpawner : MonoBehaviour
     public int TankyWeight => tankyMeteor != null ? tankyMeteor.spawnWeight : 15;
     public int MagnetWeight => magnetMeteor != null ? magnetMeteor.spawnWeight : 10;
 
+    // Physics & Earth accessors
+    public Transform EarthCenter => earthCenter != null ? earthCenter : transform;
+    public float EarthGravityGM => earthGravityGM;
+    public float MinGravityDistance => minGravityDistance;
+    public float OutwardBrakeRate => outwardBrakeRate;
+    public float TangentialDamping => tangentialDamping;
+    public float EarthRadius => earthRadius;
+    public float SeparationRadius => separationRadius;
+    public float SeparationForce => separationForce;
+    public float RandomTumbleSpeed => randomTumbleSpeed;
+    public bool UseSwarmSnailSpeed => useSwarmSnailSpeed;
+    public float SwarmInwardSpeed => swarmInwardSpeed;
+    public float SwarmMaxSpeed => swarmMaxSpeed;
+    public float SwarmGravityScale => swarmGravityScale;
+    public float SwarmSeparationMultiplier => swarmSeparationMultiplier;
+
     private void Awake()
     {
         if (Instance == null)
@@ -292,6 +335,15 @@ public class AsteroidSpawner : MonoBehaviour
 
         if (earthCenter == null)
             earthCenter = transform;
+
+        if (earthRadius <= 0f)
+        {
+            CircleCollider2D col = earthCenter != null ? earthCenter.GetComponent<CircleCollider2D>() : GetComponent<CircleCollider2D>();
+            if (col != null)
+                earthRadius = col.radius * (earthCenter != null ? earthCenter.lossyScale.x : transform.lossyScale.x);
+            else
+                earthRadius = 2.35f;
+        }
 
         SandboxMode.Enabled = sandboxMode;
     }
@@ -437,19 +489,8 @@ public class AsteroidSpawner : MonoBehaviour
         Rock rock = asteroid.GetComponent<Rock>();
         if (rock != null)
         {
-            if (config != null)
-            {
-                rock.ApplyConfig(config);
-            }
-            else
-            {
-                rock.ApplyMeteorTypeConfiguration();
-            }
-
-            if (snailSwarm)
-            {
-                rock.ApplySwarmMovement(swarmInwardSpeed, swarmMaxSpeed, swarmSeparationMultiplier);
-            }
+            bool snail = snailSwarm && useSwarmSnailSpeed;
+            rock.InitFromSpawner(this, config, snail);
         }
 
         activeAsteroids.Add(asteroid);
@@ -880,6 +921,46 @@ public class AsteroidSpawner : MonoBehaviour
 
         GUI.Label(new Rect(x, y + 26, bannerWidth, 20), subText, subStyle);
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        SandboxMode.Enabled = sandboxMode;
+        if (Application.isPlaying)
+        {
+            UpdateActiveAsteroidsPhysics();
+        }
+    }
+
+    /// <summary>
+    /// Propagates live inspector changes to all currently active asteroids in the scene.
+    /// </summary>
+    public void UpdateActiveAsteroidsPhysics()
+    {
+        for (int i = activeAsteroids.Count - 1; i >= 0; i--)
+        {
+            if (activeAsteroids[i] == null)
+            {
+                activeAsteroids.RemoveAt(i);
+                continue;
+            }
+            Rock rock = activeAsteroids[i].GetComponent<Rock>();
+            if (rock != null && !rock.IsDead)
+            {
+                rock.UpdatePhysicsSettings(
+                    earthCenter: EarthCenter,
+                    earthRadius: earthRadius,
+                    earthGravityGM: earthGravityGM,
+                    minGravityDistance: minGravityDistance,
+                    outwardBrakeRate: outwardBrakeRate,
+                    tangentialDamping: tangentialDamping,
+                    separationRadius: separationRadius,
+                    separationForce: separationForce
+                );
+            }
+        }
+    }
+#endif
 }
 
 /// <summary>
