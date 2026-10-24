@@ -264,6 +264,10 @@ public class AsteroidSpawner : MonoBehaviour
     [SerializeField] private bool sandboxMode = true;
     [Tooltip("Spawn only Normal meteors. Speedy, Tanky and Magnet are shelved for now. Works with or without sandbox mode.")]
     [SerializeField] private bool normalMeteorsOnly = true;
+    [Tooltip("Sandbox: minimum meteors per swarm.")]
+    [SerializeField] private int swarmMinCount = 20;
+    [Tooltip("Sandbox: maximum meteors per swarm.")]
+    [SerializeField] private int swarmMaxCount = 30;
     [Tooltip("When true in Sandbox, forces asteroids to crawl at snail speed. Set to FALSE if you want Sandbox testing with your custom meteor speeds!")]
     [SerializeField] private bool useSwarmSnailSpeed = false;
     [Tooltip("Sandbox: initial inward speed of swarm meteors when useSwarmSnailSpeed is true.")]
@@ -321,6 +325,8 @@ public class AsteroidSpawner : MonoBehaviour
     public float SeparationForce => separationForce;
     public float RandomTumbleSpeed => randomTumbleSpeed;
     public bool UseSwarmSnailSpeed => useSwarmSnailSpeed;
+    public int SwarmMinCount => swarmMinCount;
+    public int SwarmMaxCount => swarmMaxCount;
     public float SwarmInwardSpeed => swarmInwardSpeed;
     public float SwarmMaxSpeed => swarmMaxSpeed;
     public float SwarmGravityScale => swarmGravityScale;
