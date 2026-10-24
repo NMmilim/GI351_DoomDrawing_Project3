@@ -107,6 +107,13 @@ public class Player_controller : MonoBehaviour
     public int MaxRicochetAmmo => -1;
     public float LightningCooldownTimer => lightningCooldownTimer;
     public bool IsLightningReady => lightningCooldownTimer <= 0f && CanAfford(lightningUsesAmmo ? lightningResourceCost : 0);
+    public bool ShowAmmoHUD { get => showAmmoHUD; set => showAmmoHUD = value; }
+    public int LaserCannonCost => laserCannonCost;
+    public int RailgunCost => railgunCost;
+    public int DisposableMineCost => disposableMineCost;
+    public int LightningResourceCost => lightningResourceCost;
+    public float EarthDamageAlertTimer => earthDamageAlertTimer;
+    public int LastEarthDamageDrain => lastEarthDamageDrain;
 
     private void Awake()
     {

@@ -331,6 +331,11 @@ public class AsteroidSpawner : MonoBehaviour
     public float SwarmMaxSpeed => swarmMaxSpeed;
     public float SwarmGravityScale => swarmGravityScale;
     public float SwarmSeparationMultiplier => swarmSeparationMultiplier;
+    public bool ShowWaveHUD { get => showWaveHUD; set => showWaveHUD = value; }
+    public float WaveTimer => waveTimer;
+    public float TimeBetweenWaves => timeBetweenWaves;
+    public int TargetWaveCount => targetWaveCount;
+    public string CurrentThreatDescription => GetWaveThreatDescription(currentWave);
 
     private void Awake()
     {

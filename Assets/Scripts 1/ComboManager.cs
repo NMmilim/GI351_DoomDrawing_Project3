@@ -120,6 +120,7 @@ public class ComboManager : MonoBehaviour
     public float OverloadProgress => Mathf.Clamp01((float)totalComboHits / Mathf.Max(1, overloadThreshold));
     public int TotalResourcesEarned => totalResourcesEarned;
     public bool IsGameOver => isGameOver;
+    public bool ShowOnScreenUI { get => showOnScreenUI; set => showOnScreenUI = value; }
 
     public int CurrentScore => currentScore;
     public int HighScore => highScore;
