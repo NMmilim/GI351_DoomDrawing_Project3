@@ -856,11 +856,46 @@ public class AsteroidSpawner : MonoBehaviour
         ClearIndicators();
     }
 
-    // Lets you flip the Sandbox checkbox during Play Mode and see it take effect immediately
+#if UNITY_EDITOR
+    // Lets you flip the Sandbox checkbox and adjust physics during Play Mode and see it take effect immediately
     private void OnValidate()
     {
-        if (Application.isPlaying) SandboxMode.Enabled = sandboxMode;
+        SandboxMode.Enabled = sandboxMode;
+        if (Application.isPlaying)
+        {
+            UpdateActiveAsteroidsPhysics();
+        }
     }
+
+    /// <summary>
+    /// Propagates live inspector changes to all currently active asteroids in the scene.
+    /// </summary>
+    public void UpdateActiveAsteroidsPhysics()
+    {
+        for (int i = activeAsteroids.Count - 1; i >= 0; i--)
+        {
+            if (activeAsteroids[i] == null)
+            {
+                activeAsteroids.RemoveAt(i);
+                continue;
+            }
+            Rock rock = activeAsteroids[i].GetComponent<Rock>();
+            if (rock != null && !rock.IsDead)
+            {
+                rock.UpdatePhysicsSettings(
+                    earthCenter: EarthCenter,
+                    earthRadius: earthRadius,
+                    earthGravityGM: earthGravityGM,
+                    minGravityDistance: minGravityDistance,
+                    outwardBrakeRate: outwardBrakeRate,
+                    tangentialDamping: tangentialDamping,
+                    separationRadius: separationRadius,
+                    separationForce: separationForce
+                );
+            }
+        }
+    }
+#endif
 
     private void OnDrawGizmosSelected()
     {
@@ -921,46 +956,6 @@ public class AsteroidSpawner : MonoBehaviour
 
         GUI.Label(new Rect(x, y + 26, bannerWidth, 20), subText, subStyle);
     }
-
-#if UNITY_EDITOR
-    private void OnValidate()
-    {
-        SandboxMode.Enabled = sandboxMode;
-        if (Application.isPlaying)
-        {
-            UpdateActiveAsteroidsPhysics();
-        }
-    }
-
-    /// <summary>
-    /// Propagates live inspector changes to all currently active asteroids in the scene.
-    /// </summary>
-    public void UpdateActiveAsteroidsPhysics()
-    {
-        for (int i = activeAsteroids.Count - 1; i >= 0; i--)
-        {
-            if (activeAsteroids[i] == null)
-            {
-                activeAsteroids.RemoveAt(i);
-                continue;
-            }
-            Rock rock = activeAsteroids[i].GetComponent<Rock>();
-            if (rock != null && !rock.IsDead)
-            {
-                rock.UpdatePhysicsSettings(
-                    earthCenter: EarthCenter,
-                    earthRadius: earthRadius,
-                    earthGravityGM: earthGravityGM,
-                    minGravityDistance: minGravityDistance,
-                    outwardBrakeRate: outwardBrakeRate,
-                    tangentialDamping: tangentialDamping,
-                    separationRadius: separationRadius,
-                    separationForce: separationForce
-                );
-            }
-        }
-    }
-#endif
 }
 
 /// <summary>
