@@ -159,4 +159,4 @@ MonoBehaviour:
   minSeparationDistance: 2.2
   radialDepthStep: 1.8
   chunkSpreadAngle: 30
-  showWaveHUD: 1
+  showWaveHUD: 0

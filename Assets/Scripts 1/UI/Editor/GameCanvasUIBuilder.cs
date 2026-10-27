@@ -19,7 +19,7 @@ namespace DoomDrawing.UI.Editor
             EnsureEventSystem();
 
             // 2. Check if a Canvas HUD already exists in scene
-            GameCanvasUI existing = Object.FindFirstObjectByType<GameCanvasUI>();
+            GameCanvasUI existing = Object.FindAnyObjectByType<GameCanvasUI>();
             if (existing != null)
             {
                 bool replace = EditorUtility.DisplayDialog(
@@ -58,7 +58,7 @@ namespace DoomDrawing.UI.Editor
 
         private static void EnsureEventSystem()
         {
-            if (Object.FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
+            if (Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
             {
                 EditorApplication.ExecuteMenuItem("GameObject/UI/Event System");
             }
@@ -230,7 +230,7 @@ namespace DoomDrawing.UI.Editor
                 new Color(0.08f, 0.10f, 0.14f, 0.85f));
 
             TextMeshProUGUI waveNum = CreateTMPText("Text_WaveNumber", wavePanel, "WAVE 1", 22f,
-                FontStyles.Bold, TextAlignmentOptions.TopCenter, Color.white);
+                FontStyles.Bold, TextAlignmentOptions.Top, Color.white);
             SetRect(waveNum.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -8f), new Vector2(0f, 26f));
 
@@ -240,7 +240,7 @@ namespace DoomDrawing.UI.Editor
                 new Vector2(0f, -8f), new Vector2(0f, 22f));
 
             TextMeshProUGUI waveStatus = CreateTMPText("Text_WaveStatus", wavePanel, "Normal Meteor Swarm", 12f,
-                FontStyles.Italic, TextAlignmentOptions.BottomCenter, new Color(1f, 0.85f, 0.4f));
+                FontStyles.Italic, TextAlignmentOptions.Bottom, new Color(1f, 0.85f, 0.4f));
             SetRect(waveStatus.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 6f), new Vector2(0f, 20f));
 
@@ -264,12 +264,12 @@ namespace DoomDrawing.UI.Editor
                 new Color(0.08f, 0.10f, 0.15f, 0.98f));
 
             TextMeshProUGUI goTitle = CreateTMPText("Text_Title", card, "PLANETARY DEFENSE BREACHED", 30f,
-                FontStyles.Bold, TextAlignmentOptions.TopCenter, new Color(1f, 0.3f, 0.3f));
+                FontStyles.Bold, TextAlignmentOptions.Top, new Color(1f, 0.3f, 0.3f));
             SetRect(goTitle.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -25f), new Vector2(0f, 40f));
 
             TextMeshProUGUI goCause = CreateTMPText("Text_CauseOfDeath", card, "Unified resource pool depleted by meteor impact.", 14f,
-                FontStyles.Normal, TextAlignmentOptions.TopCenter, new Color(0.7f, 0.75f, 0.85f));
+                FontStyles.Normal, TextAlignmentOptions.Top, new Color(0.7f, 0.75f, 0.85f));
             SetRect(goCause.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -70f), new Vector2(0f, 24f));
 
@@ -280,12 +280,12 @@ namespace DoomDrawing.UI.Editor
                 new Color(0.12f, 0.15f, 0.22f, 0.85f));
 
             TextMeshProUGUI scoreVal = CreateTMPText("Text_FinalScore", scoreBox, "0", 38f,
-                FontStyles.Bold, TextAlignmentOptions.MidlineCenter, new Color(1f, 0.85f, 0.25f));
+                FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 0.85f, 0.25f));
             SetRect(scoreVal.rectTransform, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(0f, 10f), new Vector2(0f, 42f));
 
             TextMeshProUGUI highVal = CreateTMPText("Text_HighScore", scoreBox, "High Score: 0", 14f,
-                FontStyles.Normal, TextAlignmentOptions.BottomCenter, new Color(0.6f, 0.75f, 0.9f));
+                FontStyles.Normal, TextAlignmentOptions.Bottom, new Color(0.6f, 0.75f, 0.9f));
             SetRect(highVal.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 10f), new Vector2(0f, 22f));
 

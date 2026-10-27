@@ -72,7 +72,13 @@ public class DisposableMine : MonoBehaviour
     private void Awake()
     {
         col = GetComponent<CircleCollider2D>();
+        if (col == null) col = gameObject.AddComponent<CircleCollider2D>();
         col.isTrigger = true;
+        if (col.radius < 0.45f) col.radius = 0.5f;
+
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        if (rb == null) rb = gameObject.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Kinematic;
 
         SetupRangeRing();
     }
@@ -187,6 +193,15 @@ public class DisposableMine : MonoBehaviour
         {
             Instantiate(explosionVFXPrefab, center, Quaternion.identity);
         }
+        else
+        {
+            SpawnProceduralShockwave(center, currentRadius);
+        }
+
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.PlaySound3D("BulletImpact", center);
+        }
 
         LayerMask searchMask = enemyLayers.value != 0 ? enemyLayers : LayerMask.GetMask("Enemy");
         if (searchMask.value == 0) searchMask = Physics2D.AllLayers;
@@ -237,18 +252,107 @@ public class DisposableMine : MonoBehaviour
     {
         if (IsDetonated) return;
 
-        // Check if shot by a Bullet
+        // 1. Struck by player projectile (Laser, Railgun, etc.) -> remote detonation
         Bullet bullet = other.GetComponent<Bullet>();
         if (bullet != null)
         {
             Detonate();
             Destroy(bullet.gameObject);
+            return;
         }
+
+        // 2. Struck by enemy meteor -> contact / proximity detonation!
+        Rock rock = other.GetComponent<Rock>();
+        if (rock != null || other.CompareTag("Enemy"))
+        {
+            Detonate();
+        }
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (IsDetonated) return;
+
+        Bullet bullet = collision.gameObject.GetComponent<Bullet>();
+        if (bullet != null)
+        {
+            Detonate();
+            Destroy(bullet.gameObject);
+            return;
+        }
+
+        Rock rock = collision.gameObject.GetComponent<Rock>();
+        if (rock != null || collision.gameObject.CompareTag("Enemy"))
+        {
+            Detonate();
+        }
+    }
+
+    private void SpawnProceduralShockwave(Vector2 center, float radius)
+    {
+        GameObject shock = new GameObject("MineShockwave");
+        shock.transform.position = center;
+        LineRenderer lr = shock.AddComponent<LineRenderer>();
+        Shader s = Shader.Find("Sprites/Default");
+        if (s != null) lr.material = new Material(s);
+        lr.useWorldSpace = false;
+        lr.loop = true;
+        lr.positionCount = 36;
+        lr.startWidth = 0.3f;
+        lr.endWidth = 0.3f;
+
+        MineShockwaveFX fx = shock.AddComponent<MineShockwaveFX>();
+        fx.Initialize(radius);
     }
 
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, currentRadius > 0.1f ? currentRadius : minBlastRadius);
+    }
+}
+
+/// <summary>
+/// Procedural expanding shockwave ring and flash for Disposable Mine detonation.
+/// </summary>
+public class MineShockwaveFX : MonoBehaviour
+{
+    private float maxRadius = 4f;
+    private float duration = 0.32f;
+    private float elapsed = 0f;
+    private LineRenderer lr;
+
+    public void Initialize(float targetRadius)
+    {
+        maxRadius = Mathf.Max(targetRadius, 1.5f);
+        lr = GetComponent<LineRenderer>();
+    }
+
+    private void Update()
+    {
+        elapsed += Time.deltaTime;
+        float t = Mathf.Clamp01(elapsed / duration);
+
+        float currentR = Mathf.Lerp(0.4f, maxRadius, Mathf.Sin(t * Mathf.PI * 0.5f));
+        float alpha = 1f - t;
+
+        if (lr != null && lr.positionCount > 0)
+        {
+            float step = 360f / lr.positionCount;
+            for (int i = 0; i < lr.positionCount; i++)
+            {
+                float a = i * step * Mathf.Deg2Rad;
+                lr.SetPosition(i, new Vector3(Mathf.Cos(a) * currentR, Mathf.Sin(a) * currentR, 0f));
+            }
+            lr.startColor = new Color(1f, 0.65f, 0.15f, alpha * 0.95f);
+            lr.endColor = new Color(1f, 0.25f, 0.05f, alpha * 0.6f);
+            lr.startWidth = Mathf.Lerp(0.35f, 0.02f, t);
+            lr.endWidth = lr.startWidth;
+        }
+
+        if (elapsed >= duration)
+        {
+            Destroy(gameObject);
+        }
     }
 }

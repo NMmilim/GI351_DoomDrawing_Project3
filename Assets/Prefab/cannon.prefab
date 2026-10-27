@@ -169,7 +169,7 @@ MonoBehaviour:
   railgunCost: 25
   disposableMineCost: 50
   lightningResourceCost: 25
-  showAmmoHUD: 1
+  showAmmoHUD: 0
 --- !u!1 &5571584929435424118
 GameObject:
   m_ObjectHideFlags: 0

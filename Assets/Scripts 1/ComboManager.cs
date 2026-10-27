@@ -94,7 +94,7 @@ public class ComboManager : MonoBehaviour
 
     [Header("On-Screen Display")]
     [Tooltip("Render sleek combo, overload, and game-over UI on screen.")]
-    [SerializeField] private bool showOnScreenUI = true;
+    [SerializeField] private bool showOnScreenUI = false;
     [Tooltip("Log every kill/chain calculation to the Console. Keep OFF for large swarms (Debug.Log is expensive).")]
     [SerializeField] private bool verboseLogging = false;
 
@@ -545,14 +545,14 @@ public class ComboManager : MonoBehaviour
 
     private void OnGUI()
     {
-        // Render Game Over Screen Overlay (ALWAYS render when game is over!)
+        if (!showOnScreenUI) return;
+
+        // Render Game Over Screen Overlay (render when game is over)
         if (isGameOver)
         {
             DrawGameOverUI();
             return;
         }
-
-        if (!showOnScreenUI) return;
 
         // Render Combo & Overload HUD
         DrawComboAndOverloadUI();

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Unity.Cinemachine;
 
 public enum WeaponType
 {
@@ -88,15 +89,45 @@ public class Player_controller : MonoBehaviour
     [SerializeField] private int lightningResourceCost = 25;
 
     [Tooltip("Show current resource and weapon HUD on screen.")]
-    [SerializeField] private bool showAmmoHUD = true;
+    [SerializeField] private bool showAmmoHUD = false;
     [Tooltip("Log every resource gain to the Console. Keep OFF during big chain reactions (Debug.Log is expensive).")]
     [SerializeField] private bool verboseLogging = false;
+
+    [Header("Laser Cannon Charge Shot & Dynamic Camera Zoom")]
+    [Tooltip("If enabled, holding Left Click charges the Laser Cannon, zooming the camera out, then kicks in on fire and returns to original position.")]
+    [SerializeField] private bool enableLaserCharge = true;
+    [Tooltip("Time in seconds to reach 100% full charge.")]
+    [SerializeField] private float maxLaserChargeTime = 0.85f;
+    [Tooltip("Minimum hold duration required to fire a shot.")]
+    [SerializeField] private float minLaserChargeTime = 0.06f;
+    [Tooltip("How far the camera zooms OUT while charging (increases orthographic size, e.g. 1.8 units).")]
+    [SerializeField] private float chargeZoomOutAmount = 1.8f;
+    [Tooltip("Speed at which camera zooms out while charging.")]
+    [SerializeField] private float chargeZoomOutSpeed = 5.0f;
+    [Tooltip("Recoil kick added to zoom out upon firing (kicks camera back a little more), after which camera smoothly returns to original pos.")]
+    [SerializeField] private float fireKickExtraZoomOut = 0.85f;
+    [Tooltip("Speed at which camera springs back to original position after firing.")]
+    [SerializeField] private float zoomReturnSpeed = 9.0f;
+    [Tooltip("Damage dealt by a fully charged laser shot.")]
+    [SerializeField] private int chargedMaxDamage = 3;
+    [Tooltip("Visual scale multiplier for a fully charged laser projectile.")]
+    [SerializeField] private float chargedBulletScale = 1.9f;
 
     private float lightningCooldownTimer = 0f;
     private float currentAngle;
     private float angleVelocity;
     private float earthDamageAlertTimer = 0f;
     private int lastEarthDamageDrain = 0;
+
+    // Laser Charge & Camera state
+    private bool isChargingLaser = false;
+    private float laserChargeTimer = 0f;
+    private float currentCameraZoomOffset = 0f; // > 0 = zoomed out, < 0 = kicked in
+    private float targetCameraZoomOffset = 0f;
+    private float baseOrthoSize = 15f;
+    private CinemachineCamera cinemachineCamera;
+    private Camera targetMainCamera;
+    private GameObject chargeGlowObj;
 
     // Public Getters for Economy & Weapon Systems
     public WeaponType CurrentWeapon => currentWeapon;
@@ -159,6 +190,8 @@ public class Player_controller : MonoBehaviour
         {
             currentAngle = mouse_transform.eulerAngles.z;
         }
+
+        InitializeCameraRecoil();
     }
 
     private void MouseAim()
@@ -201,7 +234,11 @@ public class Player_controller : MonoBehaviour
     void Update()
     {
         // Freeze all player input once the Game Over screen is up
-        if (ComboManager.Instance != null && ComboManager.Instance.IsGameOver) return;
+        if (ComboManager.Instance != null && ComboManager.Instance.IsGameOver)
+        {
+            if (isChargingLaser) CancelLaserCharge();
+            return;
+        }
 
         if (earthDamageAlertTimer > 0f)
         {
@@ -239,8 +276,118 @@ public class Player_controller : MonoBehaviour
         }
     }
 
+    private void LateUpdate()
+    {
+        UpdateCameraZoom();
+    }
+
+    private void InitializeCameraRecoil()
+    {
+        if (cinemachineCamera == null) cinemachineCamera = FindAnyObjectByType<CinemachineCamera>();
+        if (targetMainCamera == null) targetMainCamera = Camera.main;
+
+        if (cinemachineCamera != null)
+        {
+            baseOrthoSize = cinemachineCamera.Lens.OrthographicSize;
+        }
+        else if (targetMainCamera != null)
+        {
+            baseOrthoSize = targetMainCamera.orthographicSize;
+        }
+
+        if (baseOrthoSize <= 0.1f) baseOrthoSize = 15f;
+    }
+
+    private void UpdateCameraZoom()
+    {
+        if (!enableLaserCharge) return;
+
+        if (cinemachineCamera == null && targetMainCamera == null)
+        {
+            InitializeCameraRecoil();
+        }
+
+        if (isChargingLaser)
+        {
+            // While charging: smoothly zoom OUT towards targetCameraZoomOffset
+            currentCameraZoomOffset = Mathf.MoveTowards(currentCameraZoomOffset, targetCameraZoomOffset, chargeZoomOutSpeed * Time.deltaTime);
+        }
+        else
+        {
+            // On fire kick / at rest: smoothly spring back to 0 (the original position)
+            currentCameraZoomOffset = Mathf.Lerp(currentCameraZoomOffset, 0f, zoomReturnSpeed * Time.deltaTime);
+            if (Mathf.Abs(currentCameraZoomOffset) < 0.001f)
+            {
+                currentCameraZoomOffset = 0f;
+            }
+        }
+
+        float currentOrtho = baseOrthoSize + currentCameraZoomOffset;
+
+        if (cinemachineCamera != null)
+        {
+            cinemachineCamera.Lens.OrthographicSize = currentOrtho;
+        }
+        if (targetMainCamera != null)
+        {
+            targetMainCamera.orthographicSize = currentOrtho;
+        }
+    }
+
+    private void CancelLaserCharge()
+    {
+        isChargingLaser = false;
+        laserChargeTimer = 0f;
+        targetCameraZoomOffset = 0f;
+        CleanupChargeGlow();
+    }
+
+    private void UpdateChargeGlow(float chargeRatio)
+    {
+        if (chargeGlowObj == null)
+        {
+            chargeGlowObj = new GameObject("LaserChargeGlow");
+            chargeGlowObj.transform.SetParent(firePoint, false);
+            chargeGlowObj.transform.localPosition = Vector3.zero;
+            SpriteRenderer sr = chargeGlowObj.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 10;
+            if (leftPrefab != null)
+            {
+                SpriteRenderer bSr = leftPrefab.GetComponent<SpriteRenderer>();
+                if (bSr != null) sr.sprite = bSr.sprite;
+            }
+        }
+
+        chargeGlowObj.transform.localScale = Vector3.one * Mathf.Lerp(0.15f, 0.65f, chargeRatio);
+        SpriteRenderer glowSr = chargeGlowObj.GetComponent<SpriteRenderer>();
+        if (glowSr != null)
+        {
+            float pulse = Mathf.PingPong(Time.time * 10f, 1f);
+            Color c = Color.Lerp(new Color(0.2f, 0.85f, 1f, 0.8f), new Color(1f, 0.95f, 0.4f, 1f), chargeRatio);
+            glowSr.color = Color.Lerp(c, Color.white, pulse * 0.35f);
+        }
+    }
+
+    private void CleanupChargeGlow()
+    {
+        if (chargeGlowObj != null)
+        {
+            Destroy(chargeGlowObj);
+            chargeGlowObj = null;
+        }
+    }
+
+    private void OnDisable()
+    {
+        CleanupChargeGlow();
+        if (cinemachineCamera != null) cinemachineCamera.Lens.OrthographicSize = baseOrthoSize;
+        if (targetMainCamera != null) targetMainCamera.orthographicSize = baseOrthoSize;
+    }
+
     private void HandleWeaponSwitching()
     {
+        WeaponType prevWeapon = currentWeapon;
+
         if (Keyboard.current != null)
         {
             if (Keyboard.current.digit1Key.wasPressedThisFrame) currentWeapon = WeaponType.LaserCannon;
@@ -262,6 +409,11 @@ public class Player_controller : MonoBehaviour
                 currentWeapon = (WeaponType)next;
             }
         }
+
+        if (currentWeapon != prevWeapon && isChargingLaser)
+        {
+            CancelLaserCharge();
+        }
     }
 
     private void HandleWeaponFiring()
@@ -269,10 +421,7 @@ public class Player_controller : MonoBehaviour
         switch (currentWeapon)
         {
             case WeaponType.LaserCannon:
-                if (Mouse.current.leftButton.isPressed && Time.time >= nextFireTime)
-                {
-                    FireLaserCannon();
-                }
+                HandleLaserCannonCharging();
                 break;
 
             case WeaponType.Railgun:
@@ -291,14 +440,77 @@ public class Player_controller : MonoBehaviour
         }
     }
 
-    private void FireLaserCannon()
+    private void HandleLaserCannonCharging()
     {
-        if (CanAfford(laserCannonCost))
+        if (Mouse.current == null) return;
+
+        bool isHoldingFire = Mouse.current.leftButton.isPressed;
+        bool wasReleased = Mouse.current.leftButton.wasReleasedThisFrame;
+
+        if (isHoldingFire)
         {
-            ConsumeResources(laserCannonCost);
-            Instantiate(leftPrefab, firePoint.position, firePoint.rotation);
-            nextFireTime = Time.time + fireRate;
+            if (!isChargingLaser)
+            {
+                if (CanAfford(laserCannonCost) && Time.time >= nextFireTime)
+                {
+                    isChargingLaser = true;
+                    laserChargeTimer = 0f;
+                }
+            }
+
+            if (isChargingLaser)
+            {
+                laserChargeTimer += Time.deltaTime;
+                float chargeRatio = Mathf.Clamp01(laserChargeTimer / maxLaserChargeTime);
+
+                // While charging: camera smoothly zooms OUT
+                targetCameraZoomOffset = chargeRatio * chargeZoomOutAmount;
+                UpdateChargeGlow(chargeRatio);
+            }
         }
+        else if (wasReleased || !isHoldingFire)
+        {
+            if (isChargingLaser)
+            {
+                if (laserChargeTimer >= minLaserChargeTime && CanAfford(laserCannonCost))
+                {
+                    FireChargedLaser(Mathf.Clamp01(laserChargeTimer / maxLaserChargeTime));
+                }
+                else
+                {
+                    CancelLaserCharge();
+                }
+            }
+        }
+    }
+
+    private void FireChargedLaser(float chargeRatio)
+    {
+        isChargingLaser = false;
+        laserChargeTimer = 0f;
+        targetCameraZoomOffset = 0f;
+        CleanupChargeGlow();
+
+        ConsumeResources(laserCannonCost);
+
+        Transform bullet = Instantiate(leftPrefab, firePoint.position, firePoint.rotation);
+
+        // Scale bullet size and damage based on charge
+        float sizeScale = Mathf.Lerp(1.0f, chargedBulletScale, chargeRatio);
+        bullet.localScale *= sizeScale;
+
+        Bullet bScript = bullet.GetComponent<Bullet>();
+        if (bScript != null)
+        {
+            bScript.damage = Mathf.RoundToInt(Mathf.Lerp(1f, chargedMaxDamage, chargeRatio));
+        }
+
+        // Camera recoil kick:
+        // Kicks zoom back a little more on fire, then smoothly returns to original pos in UpdateCameraZoom
+        float kick = Mathf.Lerp(fireKickExtraZoomOut * 0.4f, fireKickExtraZoomOut, chargeRatio);
+        currentCameraZoomOffset += kick;
+
+        nextFireTime = Time.time + fireRate;
     }
 
     private void FireRailgun()
@@ -318,6 +530,7 @@ public class Player_controller : MonoBehaviour
                 if (oldBullet != null) Destroy(oldBullet);
                 slug.gameObject.AddComponent<RailgunBullet>();
             }
+            // Railgun does not affect the camera
             nextFireTime = Time.time + railgunFireRate;
         }
     }
@@ -339,9 +552,10 @@ public class Player_controller : MonoBehaviour
             {
                 mineObj = new GameObject("DisposableMine");
                 mineObj.transform.position = firePoint.position;
-                mineObj.transform.localScale = Vector3.one * 0.45f;
+                mineObj.transform.localScale = Vector3.one * 0.7f;
                 SpriteRenderer sr = mineObj.AddComponent<SpriteRenderer>();
-                sr.color = new Color(1f, 0.45f, 0.1f);
+                sr.color = new Color(1f, 0.5f, 0.1f);
+                sr.sortingOrder = 5;
                 if (leftPrefab != null)
                 {
                     SpriteRenderer bulletSr = leftPrefab.GetComponent<SpriteRenderer>();

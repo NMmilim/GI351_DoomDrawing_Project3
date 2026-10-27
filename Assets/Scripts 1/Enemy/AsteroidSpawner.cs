@@ -282,7 +282,7 @@ public class AsteroidSpawner : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float swarmSeparationMultiplier = 0.1f;
 
     [Header("On-Screen HUD")]
-    [SerializeField] private bool showWaveHUD = true;
+    [SerializeField] private bool showWaveHUD = false;
 
     // Events
     public static event Action<int> OnWaveStarted;
