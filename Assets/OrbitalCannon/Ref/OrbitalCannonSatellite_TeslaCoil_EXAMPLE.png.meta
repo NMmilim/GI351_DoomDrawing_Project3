@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 8f4fd044a9de7d543acf4c4aa9664ad0
+guid: 056a3e82b59fff04883b2ac944b13e6f
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 4512501712046076540
-    second: MainMenuPlaceholder_0
+      213: 1774633934248481582
+    second: OrbitalCannonSatellite_TeslaCoil_EXAMPLE_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -102,13 +102,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: MainMenuPlaceholder_0
+      name: OrbitalCannonSatellite_TeslaCoil_EXAMPLE_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1920
-        height: 1080
+        x: 149
+        y: 104
+        width: 702
+        height: 1266
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -117,8 +117,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: c7239da1660af9e30800000000000000
-      internalID: 4512501712046076540
+      spriteID: e231c392924c0a810800000000000000
+      internalID: 1774633934248481582
       vertices: []
       indices: 
       edges: []
@@ -137,7 +137,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      MainMenuPlaceholder_0: 4512501712046076540
+      OrbitalCannonSatellite_TeslaCoil_EXAMPLE_0: 1774633934248481582
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
