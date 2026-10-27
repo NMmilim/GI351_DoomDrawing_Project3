@@ -45,6 +45,14 @@ public class Player_controller : MonoBehaviour
     [SerializeField] private float mineFireRate = 0.75f;
     private float nextFireTime;
 
+    [Header("Weapon Sprites")]
+    [SerializeField] private SpriteRenderer gunnerSpriteRenderer;
+    [SerializeField] private Sprite laserCannonSprite;
+    [SerializeField] private Sprite railgunSprite;
+    [SerializeField] private Sprite disposableMineSprite;
+
+    private WeaponType previousWeapon;
+
     [Header("Chain Lightning (Right Click Secondary Weapon)")]
     [Tooltip("Cooldown time in seconds before chain lightning can be fired again.")]
     public float lightningCooldown = 3.0f;
@@ -166,32 +174,8 @@ public class Player_controller : MonoBehaviour
 
     private void Start()
     {
-        if (earth == null)
-        {
-            GameObject earthObj = GameObject.Find("Earth");
-            if (earthObj != null) earth = earthObj.transform;
-        }
-
-        Vector2 earthCenter = GetEarthCenter();
-        Vector2 startOffset = (Vector2)transform.position - earthCenter;
-
-        // Auto-detect orbit radius from starting position if left at 0
-        if (orbitDistance <= 0.001f)
-        {
-            orbitDistance = startOffset.magnitude;
-        }
-
-        // Initialize angle smoothly from starting placement so it never snaps on frame 1
-        if (startOffset.sqrMagnitude > 0.01f)
-        {
-            currentAngle = Mathf.Atan2(startOffset.y, startOffset.x) * Mathf.Rad2Deg;
-        }
-        else
-        {
-            currentAngle = mouse_transform.eulerAngles.z;
-        }
-
-        InitializeCameraRecoil();
+        previousWeapon = currentWeapon;
+        UpdateWeaponSprite();
     }
 
     private void MouseAim()
@@ -249,7 +233,19 @@ public class Player_controller : MonoBehaviour
 
         HandleWeaponSwitching();
 
-        if (Mouse.current == null) return;
+        if (previousWeapon != currentWeapon)
+        {
+            if (isChargingLaser)
+            {
+                CancelLaserCharge();
+            }
+
+            UpdateWeaponSprite();
+            previousWeapon = currentWeapon;
+        }
+
+        if (Mouse.current == null)
+            return;
 
         // Fire active primary weapon based on selection
         HandleWeaponFiring();
@@ -384,35 +380,71 @@ public class Player_controller : MonoBehaviour
         if (targetMainCamera != null) targetMainCamera.orthographicSize = baseOrthoSize;
     }
 
+    private void UpdateWeaponSprite()
+    {
+        if (gunnerSpriteRenderer == null)
+            return;
+
+        switch (currentWeapon)
+        {
+            case WeaponType.LaserCannon:
+                gunnerSpriteRenderer.sprite = laserCannonSprite;
+                break;
+
+            case WeaponType.Railgun:
+                gunnerSpriteRenderer.sprite = railgunSprite;
+                break;
+
+            case WeaponType.DisposableMine:
+                gunnerSpriteRenderer.sprite = disposableMineSprite;
+                break;
+        }
+    }
+
     private void HandleWeaponSwitching()
     {
-        WeaponType prevWeapon = currentWeapon;
+        WeaponType previousWeapon = currentWeapon;
 
         if (Keyboard.current != null)
         {
-            if (Keyboard.current.digit1Key.wasPressedThisFrame) currentWeapon = WeaponType.LaserCannon;
-            else if (Keyboard.current.digit2Key.wasPressedThisFrame) currentWeapon = WeaponType.Railgun;
-            else if (Keyboard.current.digit3Key.wasPressedThisFrame) currentWeapon = WeaponType.DisposableMine;
+            if (Keyboard.current.digit1Key.wasPressedThisFrame)
+            {
+                currentWeapon = WeaponType.LaserCannon;
+            }
+            else if (Keyboard.current.digit2Key.wasPressedThisFrame)
+            {
+                currentWeapon = WeaponType.Railgun;
+            }
+            else if (Keyboard.current.digit3Key.wasPressedThisFrame)
+            {
+                currentWeapon = WeaponType.DisposableMine;
+            }
         }
 
         if (Mouse.current != null)
         {
             float scroll = Mouse.current.scroll.ReadValue().y;
+
             if (scroll > 0.1f)
             {
-                int prev = ((int)currentWeapon + 2) % 3;
-                currentWeapon = (WeaponType)prev;
+                int previousIndex = ((int)currentWeapon + 2) % 3;
+                currentWeapon = (WeaponType)previousIndex;
             }
             else if (scroll < -0.1f)
             {
-                int next = ((int)currentWeapon + 1) % 3;
-                currentWeapon = (WeaponType)next;
+                int nextIndex = ((int)currentWeapon + 1) % 3;
+                currentWeapon = (WeaponType)nextIndex;
             }
         }
 
-        if (currentWeapon != prevWeapon && isChargingLaser)
+        if (currentWeapon != previousWeapon)
         {
-            CancelLaserCharge();
+            if (isChargingLaser)
+            {
+                CancelLaserCharge();
+            }
+
+            UpdateWeaponSprite();
         }
     }
 

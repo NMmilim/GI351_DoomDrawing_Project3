@@ -21,13 +21,26 @@ public class GameCanvasUI : MonoBehaviour
     [SerializeField] private bool disableLegacyOnGUI = true;
 
     [Header("1. Resource Pool & Planetary Defense")]
-    [Tooltip("Displays current unified resources (e.g. '120 Res').")]
+    [Tooltip("Displays current unified resources.")]
     [SerializeField] private TMP_Text resourceText;
+
+    [Tooltip("Displays total resources earned during the current game.")]
+    [SerializeField] private TMP_Text earnedResourceText;
+
     [Tooltip("Optional slider showing resource pool capacity.")]
     [SerializeField] private Slider resourceSlider;
     [Tooltip("Optional red vignette/flash image that flashes when Earth takes impact damage.")]
     [SerializeField] private Image earthDamageFlash;
     [SerializeField] private Color flashColor = new Color(1f, 0f, 0f, 0.45f);
+        
+    [Header("Earth HP")]
+    [SerializeField] private TMP_Text earthHpText;
+    [SerializeField] private Slider earthHpSlider;
+    [SerializeField] private float earthMaxHp = 100f;
+    [SerializeField] private Color earthHpFullColor =
+        new Color(0.25f, 0.9f, 0.8f, 1f);
+    [SerializeField] private Color earthHpEmptyColor =
+        new Color(1f, 0.15f, 0.1f, 1f);
 
     [Header("2. Weapon Arsenal Selector")]
     [Tooltip("UI slots for weapons: [0] Laser Cannon, [1] Railgun, [2] Disposable Mine.")]
@@ -38,6 +51,14 @@ public class GameCanvasUI : MonoBehaviour
     [SerializeField] private TMP_Text[] weaponCostTexts;
     [SerializeField] private Color activeWeaponColor = new Color(0.2f, 0.9f, 1f, 1f);
     [SerializeField] private Color inactiveWeaponColor = new Color(0.4f, 0.4f, 0.4f, 0.6f);
+
+    [Header("Weapon Cost Text Colors")]
+    [SerializeField] private Color activeWeaponCostColor =
+        new Color(0.4f, 0.85f, 1f, 1f);
+    [SerializeField] private Color inactiveWeaponCostColor =
+        new Color(0.7f, 0.7f, 0.7f, 1f);
+    [SerializeField] private Color overloadWeaponCostColor =
+        new Color(1f, 0.9f, 0.2f, 1f);
 
     [Header("3. Chain Combo & Rank")]
     [Tooltip("Container panel for Combo HUD. Auto-hidden when combo is 0 if hideWhenNoCombo is true.")]
@@ -62,6 +83,12 @@ public class GameCanvasUI : MonoBehaviour
     [Tooltip("Countdown text while Overload is active (e.g. 'OVERLOAD: 4.8s').")]
     [SerializeField] private TMP_Text overloadTimerText;
 
+    [Header("4B. Chain Lightning UI")]
+    [SerializeField] private Slider lightningCooldownBar;
+    [SerializeField] private TMP_Text lightningPromptText;
+    [SerializeField] private TMP_Text lightningCooldownText;
+    [SerializeField] private Image lightningCooldownFill;
+
     [Header("5. Wave & Threat Radar")]
     [Tooltip("Current wave number (e.g. 'WAVE 3').")]
     [SerializeField] private TMP_Text waveNumberText;
@@ -72,7 +99,7 @@ public class GameCanvasUI : MonoBehaviour
     [Tooltip("Optional arrow pointer that rotates to face the upcoming threat angle.")]
     [SerializeField] private RectTransform threatDirectionArrow;
 
-    [Header("6. Game Over Debrief Modal")]
+    [Header("6. Game Over Debrief Modal")]  
     [Tooltip("Root modal panel for Game Over screen. Inactive during gameplay.")]
     [SerializeField] private GameObject gameOverModal;
     [SerializeField] private TMP_Text finalScoreText;
@@ -87,13 +114,54 @@ public class GameCanvasUI : MonoBehaviour
     [SerializeField] private TMP_Text peakComboText;
     [SerializeField] private TMP_Text highestRankText;
     [SerializeField] private TMP_Text survivalTimeText;
-    [SerializeField] private TMP_Text overloadCountText;
+    [SerializeField] private TMP_Text overloadCountText;    
     [SerializeField] private TMP_Text causeOfDeathText;
 
     [Header("Game Over Buttons")]
     [SerializeField] private Button retryButton;
     [SerializeField] private Button mainMenuButton;
     [SerializeField] private Button quitButton;
+
+    [Header("Overload UI Colors")]
+    [SerializeField] private Color overloadBackgroundColor =
+        new Color(0.18f, 0.15f, 0.22f, 1f);
+    [SerializeField] private Color overloadChargeColor =
+        new Color(0.85f, 0.25f, 1f, 1f);
+    [SerializeField] private Color overloadReadyColor =
+        new Color(0.9f, 0.75f, 0.1f, 1f);
+    [SerializeField] private Color overloadActiveColor =
+        new Color(1f, 0.2f, 0.5f, 1f);
+
+    [Header("Overload Ready Prompt Animation")]
+    [SerializeField] private Color overloadPromptColor =
+        new Color(1f, 0.55f, 0f, 1f);
+    [SerializeField] private Color overloadPromptPulseColor =
+        new Color(1f, 1f, 0.15f, 1f);
+    [SerializeField] private Color overloadPromptTextColor =
+        new Color(0.1f, 0.02f, 0f, 1f);
+    [SerializeField] private Color overloadPromptTextPulseColor =
+        Color.white;
+    [SerializeField] private float overloadPromptPulseSpeed = 7f;
+
+    [Header("Chain Lightning Colors")]
+    [SerializeField] private Color lightningCooldownColor =
+        new Color(0.2f, 0.85f, 1f, 1f);
+    [SerializeField] private Color lightningReadyColor =
+        new Color(0.3f, 1f, 0.4f, 1f);
+    [SerializeField] private Color lightningUnavailableColor =
+        new Color(1f, 0.25f, 0.25f, 1f);
+
+    [Header("Chain Lightning Timer Text Colors")]
+    [SerializeField] private Color lightningTimerTextColor =
+        new Color(1f, 0.8f, 0.15f, 1f);
+    [SerializeField] private Color lightningTimerReadyTextColor =
+        new Color(0.3f, 1f, 0.4f, 1f);
+    [SerializeField] private Color lightningTimerUnavailableTextColor =
+        new Color(1f, 0.25f, 0.2f, 1f);
+
+    private float trackedEarthHp;
+    private float previousEarthDamageTimer;
+    private bool earthHpTrackingInitialized;
 
     private void Awake()
     {
@@ -126,9 +194,11 @@ public class GameCanvasUI : MonoBehaviour
         ApplyLegacyIMGUIOverride();
 
         UpdateResourceUI();
+        UpdateEarthHpUI();
         UpdateWeaponUI();
         UpdateComboUI();
         UpdateOverloadUI();
+        UpdateLightningUI();
         UpdateWaveUI();
         UpdateGameOverUI();
     }
@@ -184,6 +254,92 @@ public class GameCanvasUI : MonoBehaviour
                 earthDamageFlash.gameObject.SetActive(false);
             }
         }
+
+   
+    }
+
+    private void UpdateEarthHpUI()
+    {
+        Player_controller player = Player_controller.Instance;
+
+        if (player == null)
+            return;
+
+        float maxHp = Mathf.Max(1f, earthMaxHp);
+        float currentDamageTimer = player.EarthDamageAlertTimer;
+
+        if (!earthHpTrackingInitialized)
+        {
+            trackedEarthHp = Mathf.Clamp(
+                player.Resources,
+                0f,
+                maxHp);
+
+            previousEarthDamageTimer = currentDamageTimer;
+            earthHpTrackingInitialized = true;
+        }
+        else
+        {
+            bool newEarthImpact =
+                currentDamageTimer > previousEarthDamageTimer + 0.01f;
+
+            if (newEarthImpact && player.LastEarthDamageDrain > 0)
+            {
+                trackedEarthHp = Mathf.Max(
+                    0f,
+                    trackedEarthHp - player.LastEarthDamageDrain);
+            }
+
+            previousEarthDamageTimer = currentDamageTimer;
+        }
+
+        float normalizedHp = Mathf.Clamp01(trackedEarthHp / maxHp);
+
+        if (earthHpText != null)
+        {
+            earthHpText.text =
+                $"EARTH HP: {Mathf.CeilToInt(trackedEarthHp)}";
+
+            earthHpText.color = Color.Lerp(
+                earthHpEmptyColor,
+                earthHpFullColor,
+                normalizedHp);
+        }
+
+        if (earthHpSlider != null)
+        {
+            earthHpSlider.minValue = 0f;
+            earthHpSlider.maxValue = maxHp;
+
+            earthHpSlider.SetValueWithoutNotify(trackedEarthHp);
+
+            if (earthHpSlider.fillRect != null)
+            {
+                Image fillImage =
+                    earthHpSlider.fillRect.GetComponent<Image>();
+
+                if (fillImage != null)
+                {
+                    Color targetColor = Color.Lerp(
+                        earthHpEmptyColor,
+                        earthHpFullColor,
+                        normalizedHp);
+
+                    fillImage.color = Color.Lerp(
+                        fillImage.color,
+                        targetColor,
+                        Time.unscaledDeltaTime * 8f);
+                }
+            }
+        }
+
+        if (trackedEarthHp <= 0f &&
+            ComboManager.Instance != null &&
+            !ComboManager.Instance.IsGameOver)
+        {
+            ComboManager.Instance.TriggerGameOver(
+                "Earth Health Depleted");
+        }
     }
 
     // ==========================================
@@ -220,7 +376,7 @@ public class GameCanvasUI : MonoBehaviour
     }
 
     // ==========================================
-    // 3. COMBO & GRADE UI
+    // 3. CHAIN & GRADE UI
     // ==========================================
     private void UpdateComboUI()
     {
@@ -245,7 +401,7 @@ public class GameCanvasUI : MonoBehaviour
 
         if (comboHitsText != null)
         {
-            comboHitsText.text = comboHits > 0 ? $"{comboHits} HITS" : "0";
+            comboHitsText.text = comboHits > 0 ? $"{comboHits} HITS" : "0 HITS";
         }
 
         if (comboGradeText != null)
@@ -271,7 +427,8 @@ public class GameCanvasUI : MonoBehaviour
     // ==========================================
     private void UpdateOverloadUI()
     {
-        if (ComboManager.Instance == null) return;
+        if (ComboManager.Instance == null)
+            return;
 
         bool isReady = ComboManager.Instance.IsOverloadReady;
         bool isActive = ComboManager.Instance.IsOverloadActive;
@@ -280,30 +437,182 @@ public class GameCanvasUI : MonoBehaviour
 
         if (overloadChargeBar != null)
         {
-            overloadChargeBar.value = isActive ? Mathf.Clamp01(remaining / 5.0f) : progress;
+            overloadChargeBar.value = isActive
+                ? Mathf.Clamp01(remaining / 5f)
+                : progress;
+
+            if (overloadChargeBar.fillRect != null)
+            {
+                Image fillImage =
+                    overloadChargeBar.fillRect.GetComponent<Image>();
+
+                if (fillImage != null)
+                {
+                    Color targetColor = isActive
+                        ? overloadActiveColor
+                        : isReady
+                            ? overloadReadyColor
+                            : overloadChargeColor;
+
+                    fillImage.color = Color.Lerp(
+                        fillImage.color,
+                        targetColor,
+                        Time.unscaledDeltaTime * 8f);
+                }
+            }
         }
 
         if (overloadReadyPrompt != null)
         {
-            overloadReadyPrompt.SetActive(isReady && !isActive);
+            bool showPrompt = isReady && !isActive;
+            overloadReadyPrompt.SetActive(showPrompt);
+
+            if (showPrompt)
+            {
+                float pulse = (Mathf.Sin(
+                    Time.unscaledTime * overloadPromptPulseSpeed) + 1f) * 0.5f;
+
+                pulse = Mathf.SmoothStep(0f, 1f, pulse);
+
+                Color promptColor = Color.Lerp(
+                    overloadPromptColor,
+                    overloadPromptPulseColor,
+                    pulse);
+
+                Image promptImage =
+                    overloadReadyPrompt.GetComponent<Image>();
+
+                if (promptImage != null)
+                {
+                    promptImage.color = promptColor;
+                }
+
+                TMP_Text promptText =
+                    overloadReadyPrompt.GetComponentInChildren<TMP_Text>();
+
+                if (promptText != null)
+                {
+                    promptText.color = Color.Lerp(
+                        overloadPromptTextColor,
+                        overloadPromptTextPulseColor,
+                        pulse);
+                }
+            }
         }
 
         if (overloadActiveBanner != null)
         {
             overloadActiveBanner.SetActive(isActive);
+
+            if (isActive)
+            {
+                Image bannerImage =
+                    overloadActiveBanner.GetComponent<Image>();
+
+                if (bannerImage != null)
+                {
+                    float pulse =
+                        (Mathf.Sin(Time.unscaledTime * 8f) + 1f) * 0.5f;
+
+                    bannerImage.color = Color.Lerp(
+                        overloadActiveColor,
+                        Color.white,
+                        pulse * 0.2f);
+                }
+            }
         }
 
         if (overloadTimerText != null)
         {
+            overloadTimerText.gameObject.SetActive(isActive);
+
             if (isActive)
             {
-                overloadTimerText.gameObject.SetActive(true);
-                overloadTimerText.text = $"OVERLOAD: {remaining:F1}s";
+                overloadTimerText.text =
+                    $"OVERLOAD: {remaining:F1}s";
+
+                overloadTimerText.color = overloadActiveColor;
             }
-            else
-            {
-                overloadTimerText.gameObject.SetActive(false);
-            }
+        }
+    }
+
+    // ==========================================
+    // 4B. CHAIN LIGHTNING UI
+    // ==========================================
+    private void UpdateChainLightningUI()
+    {
+        Player_controller player = Player_controller.Instance;
+
+        if (player == null)
+            return;
+
+        float cooldown = Mathf.Max(0f, player.lightningCooldown);
+        float remaining = Mathf.Clamp(
+            player.LightningCooldownTimer,
+            0f,
+            cooldown);
+
+        bool ready = player.IsLightningReady;
+
+        float progress = cooldown > 0f
+            ? 1f - remaining / cooldown
+            : 1f;
+
+        if (lightningCooldownBar != null)
+        {
+            lightningCooldownBar.minValue = 0f;
+            lightningCooldownBar.maxValue = 1f;
+
+            lightningCooldownBar.SetValueWithoutNotify(
+                Mathf.Clamp01(progress));
+        }
+
+        Color targetColor = ready
+            ? lightningReadyColor
+            : remaining > 0f
+                ? lightningCooldownColor
+                : lightningUnavailableColor;
+
+        if (lightningCooldownFill != null)
+        {
+            lightningCooldownFill.color = Color.Lerp(
+                lightningCooldownFill.color,
+                targetColor,
+                Time.unscaledDeltaTime * 8f);
+        }
+
+        if (lightningCooldownText != null)
+        {
+            lightningCooldownText.text = remaining > 0f
+                ? $"{remaining:F1}s"
+                : ready
+                    ? "READY"
+                    : "NOT ENOUGH AMMO";
+
+            Color targetTextColor = ready
+                ? lightningTimerReadyTextColor
+                : remaining > 0f
+                    ? lightningTimerTextColor
+                    : lightningTimerUnavailableTextColor;
+
+            lightningCooldownText.color = Color.Lerp(
+                lightningCooldownText.color,
+                targetTextColor,
+                Time.unscaledDeltaTime * 8f);
+        }
+
+        if (lightningPromptText != null)
+        {
+            lightningPromptText.text = ready
+                ? "RMB - CHAIN LIGHTNING"
+                : remaining > 0f
+                    ? "CHAIN LIGHTNING RECHARGING"
+                    : "NOT ENOUGH AMMO";
+
+            lightningPromptText.color = Color.Lerp(
+                lightningPromptText.color,
+                targetColor,
+                Time.unscaledDeltaTime * 8f);
         }
     }
 
@@ -418,9 +727,19 @@ public class GameCanvasUI : MonoBehaviour
             int secs = Mathf.FloorToInt(t % 60f);
             survivalTimeText.text = $"{mins:00}:{secs:00}";
         }
-
+        if (survivalTimeText != null)
         if (overloadCountText != null) overloadCountText.text = $"{ComboManager.Instance.OverloadActivations}";
         if (causeOfDeathText != null) causeOfDeathText.text = ComboManager.Instance.GameOverCause;
+
+        if (earnedResourceText != null)
+        {
+            int earnedResources = ComboManager.Instance != null
+                ? ComboManager.Instance.TotalResourcesEarned
+                : 0;
+
+            earnedResourceText.text =
+                $"RESOURCES EARNED: {earnedResources}";
+        }
     }
 
     // Button Callbacks
@@ -439,5 +758,82 @@ public class GameCanvasUI : MonoBehaviour
     public void OnQuitClicked()
     {
         Application.Quit();
+    }
+
+    private void UpdateLightningUI()
+    {
+        Player_controller player = Player_controller.Instance;
+
+        if (player == null)
+            return;
+
+        float cooldown = Mathf.Max(0f, player.lightningCooldown);
+        float remaining = Mathf.Clamp(
+            player.LightningCooldownTimer,
+            0f,
+            cooldown);
+
+        bool ready = player.IsLightningReady;
+
+        if (lightningCooldownBar != null)
+        {
+            lightningCooldownBar.minValue = 0f;
+            lightningCooldownBar.maxValue = 1f;
+
+            float progress = cooldown > 0f
+                ? 1f - remaining / cooldown
+                : 1f;
+
+            lightningCooldownBar.SetValueWithoutNotify(
+                Mathf.Clamp01(progress));
+        }
+
+        Color targetBarColor = ready
+            ? lightningReadyColor
+            : remaining > 0f
+                ? lightningCooldownColor
+                : lightningUnavailableColor;
+
+        if (lightningCooldownFill != null)
+        {
+            lightningCooldownFill.color = Color.Lerp(
+                lightningCooldownFill.color,
+                targetBarColor,
+                Time.unscaledDeltaTime * 8f);
+        }
+
+        if (lightningCooldownText != null)
+        {
+            lightningCooldownText.text = remaining > 0f
+                ? $"{remaining:F1}s"
+                : ready
+                    ? "READY"
+                    : "NOT ENOUGH AMMO";
+
+            Color targetTextColor = ready
+                ? lightningTimerReadyTextColor
+                : remaining > 0f
+                    ? lightningTimerTextColor
+                    : lightningTimerUnavailableTextColor;
+
+            lightningCooldownText.color = Color.Lerp(
+                lightningCooldownText.color,
+                targetTextColor,
+                Time.unscaledDeltaTime * 8f);
+        }
+
+        if (lightningPromptText != null)
+        {
+            lightningPromptText.text = ready
+                ? "RMB - CHAIN LIGHTNING"
+                : remaining > 0f
+                    ? "CHAIN LIGHTNING RECHARGING"
+                    : "NOT ENOUGH AMMO";
+
+            lightningPromptText.color = Color.Lerp(
+                lightningPromptText.color,
+                targetBarColor,
+                Time.unscaledDeltaTime * 8f);
+        }
     }
 }
