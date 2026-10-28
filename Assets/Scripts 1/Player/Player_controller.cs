@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 using Unity.Cinemachine;
 
 public enum WeaponType
@@ -101,14 +102,17 @@ public class Player_controller : MonoBehaviour
     [Tooltip("Log every resource gain to the Console. Keep OFF during big chain reactions (Debug.Log is expensive).")]
     [SerializeField] private bool verboseLogging = false;
 
-    [Header("Laser Cannon Charge Shot & Dynamic Camera Zoom")]
-    [Tooltip("If enabled, holding Left Click charges the Laser Cannon, zooming the camera out, then kicks in on fire and returns to original position.")]
-    [SerializeField] private bool enableLaserCharge = true;
-    [Tooltip("Time in seconds to reach 100% full charge.")]
-    [SerializeField] private float maxLaserChargeTime = 0.85f;
-    [Tooltip("Minimum hold duration required to fire a shot.")]
-    [SerializeField] private float minLaserChargeTime = 0.06f;
-    [Tooltip("How far the camera zooms OUT while charging (increases orthographic size, e.g. 1.8 units).")]
+    [Header("Railgun Charge Shot & Dynamic Camera Zoom")]
+    [Tooltip("If enabled, holding Left Click charges the Railgun, zooming the camera out, then kicks on fire and returns to original position.")]
+    [FormerlySerializedAs("enableLaserCharge")]
+    [SerializeField] private bool enableRailgunCharge = true;
+    [Tooltip("Time in seconds to reach 100% full Railgun charge.")]
+    [FormerlySerializedAs("maxLaserChargeTime")]
+    [SerializeField] private float maxRailgunChargeTime = 0.85f;
+    [Tooltip("Minimum hold duration required to release a charged Railgun shot.")]
+    [FormerlySerializedAs("minLaserChargeTime")]
+    [SerializeField] private float minRailgunChargeTime = 0.06f;
+    [Tooltip("How far the camera zooms OUT while charging the Railgun (increases orthographic size, e.g. 1.8 units).")]
     [SerializeField] private float chargeZoomOutAmount = 1.8f;
     [Tooltip("Speed at which camera zooms out while charging.")]
     [SerializeField] private float chargeZoomOutSpeed = 5.0f;
@@ -116,9 +120,9 @@ public class Player_controller : MonoBehaviour
     [SerializeField] private float fireKickExtraZoomOut = 0.85f;
     [Tooltip("Speed at which camera springs back to original position after firing.")]
     [SerializeField] private float zoomReturnSpeed = 9.0f;
-    [Tooltip("Damage dealt by a fully charged laser shot.")]
+    [Tooltip("Damage dealt by a fully charged Railgun shot.")]
     [SerializeField] private int chargedMaxDamage = 3;
-    [Tooltip("Visual scale multiplier for a fully charged laser projectile.")]
+    [Tooltip("Visual scale multiplier for a fully charged Railgun projectile.")]
     [SerializeField] private float chargedBulletScale = 1.9f;
 
     private float lightningCooldownTimer = 0f;
@@ -127,9 +131,9 @@ public class Player_controller : MonoBehaviour
     private float earthDamageAlertTimer = 0f;
     private int lastEarthDamageDrain = 0;
 
-    // Laser Charge & Camera state
-    private bool isChargingLaser = false;
-    private float laserChargeTimer = 0f;
+    // Railgun Charge & Camera state
+    private bool isChargingRailgun = false;
+    private float railgunChargeTimer = 0f;
     private float currentCameraZoomOffset = 0f; // > 0 = zoomed out, < 0 = kicked in
     private float targetCameraZoomOffset = 0f;
     private float baseOrthoSize = 15f;
@@ -137,6 +141,7 @@ public class Player_controller : MonoBehaviour
     private Camera targetMainCamera;
     private GameObject chargeGlowObj;
     private bool lightningWasOnCooldown;
+
     // Public Getters for Economy & Weapon Systems
     public WeaponType CurrentWeapon => currentWeapon;
     public int Resources => resources;
@@ -153,6 +158,8 @@ public class Player_controller : MonoBehaviour
     public int LightningResourceCost => lightningResourceCost;
     public float EarthDamageAlertTimer => earthDamageAlertTimer;
     public int LastEarthDamageDrain => lastEarthDamageDrain;
+    public bool IsChargingRailgun => isChargingRailgun;
+    public float RailgunChargeProgress => isChargingRailgun && maxRailgunChargeTime > 0.001f ? Mathf.Clamp01(railgunChargeTimer / maxRailgunChargeTime) : 0f;
 
     private void Awake()
     {
@@ -174,8 +181,35 @@ public class Player_controller : MonoBehaviour
 
     private void Start()
     {
+        if (earth == null)
+        {
+            GameObject earthObj = GameObject.Find("Earth");
+            if (earthObj != null) earth = earthObj.transform;
+        }
+
+        Vector2 earthCenter = GetEarthCenter();
+        Vector2 startOffset = (Vector2)transform.position - earthCenter;
+
+        // Auto-detect orbit radius from starting position if left at 0
+        if (orbitDistance <= 0.001f)
+        {
+            orbitDistance = startOffset.magnitude;
+        }
+
+        // Initialize angle smoothly from starting placement so it never snaps on frame 1
+        if (startOffset.sqrMagnitude > 0.01f)
+        {
+            currentAngle = Mathf.Atan2(startOffset.y, startOffset.x) * Mathf.Rad2Deg;
+        }
+        else
+        {
+            currentAngle = mouse_transform.eulerAngles.z;
+        }
+
+        InitializeCameraRecoil();
+
         previousWeapon = currentWeapon;
-        UpdateWeaponSprite();
+        UpdateWeaponSprite(playSound: false);
     }
 
     private void MouseAim()
@@ -220,7 +254,7 @@ public class Player_controller : MonoBehaviour
         // Freeze all player input once the Game Over screen is up
         if (ComboManager.Instance != null && ComboManager.Instance.IsGameOver)
         {
-            if (isChargingLaser) CancelLaserCharge();
+            if (isChargingRailgun) CancelRailgunCharge();
             return;
         }
 
@@ -235,12 +269,12 @@ public class Player_controller : MonoBehaviour
 
         if (previousWeapon != currentWeapon)
         {
-            if (isChargingLaser)
+            if (isChargingRailgun)
             {
-                CancelLaserCharge();
+                CancelRailgunCharge();
             }
 
-            UpdateWeaponSprite();
+            UpdateWeaponSprite(playSound: true);
             previousWeapon = currentWeapon;
         }
 
@@ -309,16 +343,16 @@ public class Player_controller : MonoBehaviour
 
     private void UpdateCameraZoom()
     {
-        if (!enableLaserCharge) return;
+        if (!enableRailgunCharge) return;
 
         if (cinemachineCamera == null && targetMainCamera == null)
         {
             InitializeCameraRecoil();
         }
 
-        if (isChargingLaser)
+        if (isChargingRailgun)
         {
-            // While charging: smoothly zoom OUT towards targetCameraZoomOffset
+            // While charging Railgun: smoothly zoom OUT towards targetCameraZoomOffset
             currentCameraZoomOffset = Mathf.MoveTowards(currentCameraZoomOffset, targetCameraZoomOffset, chargeZoomOutSpeed * Time.deltaTime);
         }
         else
@@ -343,10 +377,10 @@ public class Player_controller : MonoBehaviour
         }
     }
 
-    private void CancelLaserCharge()
+    private void CancelRailgunCharge()
     {
-        isChargingLaser = false;
-        laserChargeTimer = 0f;
+        isChargingRailgun = false;
+        railgunChargeTimer = 0f;
         targetCameraZoomOffset = 0f;
         CleanupChargeGlow();
     }
@@ -355,7 +389,7 @@ public class Player_controller : MonoBehaviour
     {
         if (chargeGlowObj == null)
         {
-            chargeGlowObj = new GameObject("LaserChargeGlow");
+            chargeGlowObj = new GameObject("RailgunChargeGlow");
             chargeGlowObj.transform.SetParent(firePoint, false);
             chargeGlowObj.transform.localPosition = Vector3.zero;
             SpriteRenderer sr = chargeGlowObj.AddComponent<SpriteRenderer>();
@@ -393,7 +427,7 @@ public class Player_controller : MonoBehaviour
         if (targetMainCamera != null) targetMainCamera.orthographicSize = baseOrthoSize;
     }
 
-    private void UpdateWeaponSprite()
+    private void UpdateWeaponSprite(bool playSound = true)
     {
         if (gunnerSpriteRenderer == null)
             return;
@@ -402,19 +436,19 @@ public class Player_controller : MonoBehaviour
         {
             case WeaponType.LaserCannon:
                 gunnerSpriteRenderer.sprite = laserCannonSprite;
-                if (SoundManager.Instance != null)
+                if (playSound && SoundManager.Instance != null)
                     SoundManager.Instance.PlaySound2D("Digital_Click");
                 break;
 
             case WeaponType.Railgun:
                 gunnerSpriteRenderer.sprite = railgunSprite;
-                if (SoundManager.Instance != null)
+                if (playSound && SoundManager.Instance != null)
                     SoundManager.Instance.PlaySound2D("UI_Open");
                 break;
 
             case WeaponType.DisposableMine:
                 gunnerSpriteRenderer.sprite = disposableMineSprite;
-                if (SoundManager.Instance != null)
+                if (playSound && SoundManager.Instance != null)
                     SoundManager.Instance.PlaySound2D("UI_Close");
                 break;
         }
@@ -422,8 +456,6 @@ public class Player_controller : MonoBehaviour
 
     private void HandleWeaponSwitching()
     {
-        WeaponType previousWeapon = currentWeapon;
-
         if (Keyboard.current != null)
         {
             if (Keyboard.current.digit1Key.wasPressedThisFrame)
@@ -455,16 +487,6 @@ public class Player_controller : MonoBehaviour
                 currentWeapon = (WeaponType)nextIndex;
             }
         }
-
-        if (currentWeapon != previousWeapon)
-        {
-            if (isChargingLaser)
-            {
-                CancelLaserCharge();
-            }
-
-            UpdateWeaponSprite();
-        }
     }
 
     private void HandleWeaponFiring()
@@ -472,13 +494,20 @@ public class Player_controller : MonoBehaviour
         switch (currentWeapon)
         {
             case WeaponType.LaserCannon:
-                HandleLaserCannonCharging();
+                if ((Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.leftButton.isPressed) && Time.time >= nextFireTime)
+                {
+                    FireLaserCannon();
+                }
                 break;
 
             case WeaponType.Railgun:
-                if ((Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.leftButton.isPressed) && Time.time >= nextFireTime)
+                if (enableRailgunCharge)
                 {
-                    FireRailgun();
+                    HandleRailgunCharging();
+                }
+                else if ((Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.leftButton.isPressed) && Time.time >= nextFireTime)
+                {
+                    FireChargedRailgun(1f);
                 }
                 break;
 
@@ -491,7 +520,20 @@ public class Player_controller : MonoBehaviour
         }
     }
 
-    private void HandleLaserCannonCharging()
+    private void FireLaserCannon()
+    {
+        if (CanAfford(laserCannonCost))
+        {
+            ConsumeResources(laserCannonCost);
+            Instantiate(leftPrefab, firePoint.position, firePoint.rotation);
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.PlaySound3D("Laser_Shoot", firePoint.position);
+
+            nextFireTime = Time.time + fireRate;
+        }
+    }
+
+    private void HandleRailgunCharging()
     {
         if (Mouse.current == null) return;
 
@@ -500,22 +542,22 @@ public class Player_controller : MonoBehaviour
 
         if (isHoldingFire)
         {
-            if (!isChargingLaser)
+            if (!isChargingRailgun)
             {
-                if (CanAfford(laserCannonCost) && Time.time >= nextFireTime)
+                if (CanAfford(railgunCost) && Time.time >= nextFireTime)
                 {
-                    isChargingLaser = true;
-                    laserChargeTimer = 0f;
+                    isChargingRailgun = true;
+                    railgunChargeTimer = 0f;
                     if (SoundManager.Instance != null)
                         SoundManager.Instance.PlaySound3D("Railgun_Charge", firePoint.position);
                 }
             }
 
-            if (isChargingLaser)
+            if (isChargingRailgun)
             {
-                laserChargeTimer += Time.deltaTime;
-                float chargeRatio = Mathf.Clamp01(laserChargeTimer / maxLaserChargeTime);
-               
+                railgunChargeTimer += Time.deltaTime;
+                float chargeRatio = Mathf.Clamp01(railgunChargeTimer / maxRailgunChargeTime);
+
                 // While charging: camera smoothly zooms OUT
                 targetCameraZoomOffset = chargeRatio * chargeZoomOutAmount;
                 UpdateChargeGlow(chargeRatio);
@@ -523,40 +565,53 @@ public class Player_controller : MonoBehaviour
         }
         else if (wasReleased || !isHoldingFire)
         {
-            if (isChargingLaser)
+            if (isChargingRailgun)
             {
-                if (laserChargeTimer >= minLaserChargeTime && CanAfford(laserCannonCost))
+                if (railgunChargeTimer >= minRailgunChargeTime && CanAfford(railgunCost))
                 {
-                    FireChargedLaser(Mathf.Clamp01(laserChargeTimer / maxLaserChargeTime));
-                    if (SoundManager.Instance != null)
-                        SoundManager.Instance.PlaySound3D("Laser_Shoot", firePoint.position);
-
+                    FireChargedRailgun(Mathf.Clamp01(railgunChargeTimer / maxRailgunChargeTime));
                 }
                 else
                 {
-                    CancelLaserCharge();
+                    CancelRailgunCharge();
                 }
             }
         }
     }
 
-    private void FireChargedLaser(float chargeRatio)
+    private void FireChargedRailgun(float chargeRatio)
     {
-        isChargingLaser = false;
-        laserChargeTimer = 0f;
+        isChargingRailgun = false;
+        railgunChargeTimer = 0f;
         targetCameraZoomOffset = 0f;
         CleanupChargeGlow();
-     
-        ConsumeResources(laserCannonCost);
 
-        Transform bullet = Instantiate(leftPrefab, firePoint.position, firePoint.rotation);
+        ConsumeResources(railgunCost);
+
         if (SoundManager.Instance != null)
-            SoundManager.Instance.PlaySound3D("Laser_Fire", firePoint.position);
-        // Scale bullet size and damage based on charge
-        float sizeScale = Mathf.Lerp(1.0f, chargedBulletScale, chargeRatio);
-        bullet.localScale *= sizeScale;
+            SoundManager.Instance.PlaySound3D("Railgun_Fire", firePoint.position);
 
-        Bullet bScript = bullet.GetComponent<Bullet>();
+        GameObject railgunObj;
+        Bullet bScript;
+        if (railgunPrefab != null)
+        {
+            railgunObj = Instantiate(railgunPrefab, firePoint.position, firePoint.rotation);
+            bScript = railgunObj.GetComponent<Bullet>();
+        }
+        else
+        {
+            // Procedural Railgun projectile: spawns and configures RailgunBullet with piercing cyan trail
+            Transform slug = Instantiate(leftPrefab, firePoint.position, firePoint.rotation);
+            Bullet oldBullet = slug.GetComponent<Bullet>();
+            if (oldBullet != null) Destroy(oldBullet);
+            bScript = slug.gameObject.AddComponent<RailgunBullet>();
+            railgunObj = slug.gameObject;
+        }
+
+        // Scale projectile size and damage based on charge
+        float sizeScale = Mathf.Lerp(1.0f, chargedBulletScale, chargeRatio);
+        railgunObj.transform.localScale *= sizeScale;
+
         if (bScript != null)
         {
             bScript.damage = Mathf.RoundToInt(Mathf.Lerp(1f, chargedMaxDamage, chargeRatio));
@@ -564,34 +619,13 @@ public class Player_controller : MonoBehaviour
 
         // Camera recoil kick:
         // Kicks zoom back a little more on fire, then smoothly returns to original pos in UpdateCameraZoom
-        float kick = Mathf.Lerp(fireKickExtraZoomOut * 0.4f, fireKickExtraZoomOut, chargeRatio);
-        currentCameraZoomOffset += kick;
-
-        nextFireTime = Time.time + fireRate;
-    }
-
-    private void FireRailgun()
-    {
-        if (CanAfford(railgunCost))
+        if (enableRailgunCharge)
         {
-            ConsumeResources(railgunCost);
-            if (railgunPrefab != null)
-            {
-                Instantiate(railgunPrefab, firePoint.position, firePoint.rotation);
-            }
-            else
-            {
-                if (SoundManager.Instance != null)
-                    SoundManager.Instance.PlaySound3D("Railgun_Fire", firePoint.position);
-                // Procedural Railgun projectile: spawns and configures RailgunBullet with piercing cyan trail
-                Transform slug = Instantiate(leftPrefab, firePoint.position, firePoint.rotation);
-                Bullet oldBullet = slug.GetComponent<Bullet>();
-                if (oldBullet != null) Destroy(oldBullet);
-                slug.gameObject.AddComponent<RailgunBullet>();
-            }
-            // Railgun does not affect the camera
-            nextFireTime = Time.time + railgunFireRate;
+            float kick = Mathf.Lerp(fireKickExtraZoomOut * 0.4f, fireKickExtraZoomOut, chargeRatio);
+            currentCameraZoomOffset += kick;
         }
+
+        nextFireTime = Time.time + railgunFireRate;
     }
 
     private void FireDisposableMine()
@@ -844,7 +878,7 @@ public class Player_controller : MonoBehaviour
 
         if (resources <= 0)
         {
-            Debug.LogError("[Game Over] Earth defenses depleted! Resource pool reached 0 from asteroid impact.");
+            Debug.LogWarning("[Game Over] Earth defenses depleted! Resource pool reached 0 from asteroid impact.");
             if (ComboManager.Instance != null)
             {
                 string cause = rock != null ? $"Earth Breached by {rock.meteorType} Asteroid" : "Earth Defenses Depleted";
@@ -937,7 +971,6 @@ public class Player_controller : MonoBehaviour
 
         if (lightningCooldownTimer > 0f)
         {
-          
             cdStyle.normal.textColor = new Color(1f, 0.45f, 0.2f);
             GUI.Label(new Rect(x + 12, secY, 130f, 18), $"RMB: {lightningCooldownTimer:F1}s", cdStyle);
 
@@ -957,10 +990,9 @@ public class Player_controller : MonoBehaviour
         }
         else
         {
-
             bool canAffordSec = CanAfford(lightningUsesAmmo ? lightningResourceCost : 0);
             cdStyle.normal.textColor = canAffordSec ? (isOverload ? new Color(1f, 0.85f, 0.2f) : new Color(0.3f, 1f, 0.4f)) : Color.gray;
-                
+
             string readyText = canAffordSec ? (isOverload ? "RMB: [READY - FREE]" : $"RMB Lightning: [READY - {lightningResourceCost} Res]") : "[OUT OF RESOURCES]";
             GUI.Label(new Rect(x + 12, secY, cardWidth - 24, 18), readyText, cdStyle);
         }
