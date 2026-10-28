@@ -730,7 +730,6 @@ public class GameCanvasUI : MonoBehaviour
             int secs = Mathf.FloorToInt(t % 60f);
             survivalTimeText.text = $"{mins:00}:{secs:00}";
         }
-        if (survivalTimeText != null)
         if (overloadCountText != null) overloadCountText.text = $"{ComboManager.Instance.OverloadActivations}";
         if (causeOfDeathText != null) causeOfDeathText.text = ComboManager.Instance.GameOverCause;
 
@@ -761,6 +760,9 @@ public class GameCanvasUI : MonoBehaviour
     public void OnQuitClicked()
     {
         Application.Quit();
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#endif
     }
 
     private void UpdateLightningUI()

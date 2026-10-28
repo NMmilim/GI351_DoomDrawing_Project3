@@ -266,6 +266,9 @@ MonoBehaviour:
   - groupID: Detonation
     clips:
     - {fileID: 8300000, guid: 1bf9fbc7760558a4fa1571ed14bbf889, type: 3}
+  - groupID: DebrisImpact
+    clips:
+    - {fileID: 8300000, guid: 1bf9fbc7760558a4fa1571ed14bbf889, type: 3}
 --- !u!114 &3954555000660303314
 MonoBehaviour:
   m_ObjectHideFlags: 0

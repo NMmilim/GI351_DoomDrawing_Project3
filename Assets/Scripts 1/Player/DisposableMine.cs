@@ -188,7 +188,7 @@ public class DisposableMine : MonoBehaviour
         state = MineState.Detonated;
 
         Vector2 center = transform.position;
-        SoundManager.Instance.PlaySound3D("Detonation", center);
+        if (SoundManager.Instance != null) SoundManager.Instance.PlaySound3D("Detonation", center);
 
         if (explosionVFXPrefab != null)
         {

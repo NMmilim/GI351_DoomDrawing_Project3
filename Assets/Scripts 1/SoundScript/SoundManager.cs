@@ -45,6 +45,12 @@ public class SoundManager : MonoBehaviour
 
     public void PlaySound3D(AudioClip clip, Vector3 pos)
     {
+        if (Instance != null && Instance != this)
+        {
+            Instance.PlaySound3D(clip, pos);
+            return;
+        }
+
         if (clip == null)
             return;
 
@@ -53,6 +59,12 @@ public class SoundManager : MonoBehaviour
 
     public void PlaySound3D(string soundName, Vector3 pos)
     {
+        if (Instance != null && Instance != this)
+        {
+            Instance.PlaySound3D(soundName, pos);
+            return;
+        }
+
         if (sfxLibrary == null)
             return;
 
@@ -61,6 +73,12 @@ public class SoundManager : MonoBehaviour
 
     public void PlaySound2D(string soundName)
     {
+        if (Instance != null && Instance != this)
+        {
+            Instance.PlaySound2D(soundName);
+            return;
+        }
+
         if (sfxLibrary == null)
         {
             Debug.LogWarning(
@@ -103,18 +121,13 @@ public class SoundManager : MonoBehaviour
                 "SoundManager: AudioSource GameObject or one of its parents " +
                 "is inactive. Check the GameObject hierarchy.",
                 sfx2DSource);
-            Debug.LogWarning(
-    $"Manager active: {gameObject.activeInHierarchy}\n" +
-    $"Source active: {sfx2DSource.gameObject.activeInHierarchy}\n" +
-    $"Source enabled: {sfx2DSource.enabled}\n" +
-    $"Manager parent: {(transform.parent == null ? "none" : transform.parent.name)}",
-    gameObject);
             return;
         }
 
         sfx2DSource.PlayOneShot(clip);
     }
-private void DiagnoseAudioHierarchy()
+
+    private void DiagnoseAudioHierarchy()
     {
         Transform current = sfx2DSource.transform;
 

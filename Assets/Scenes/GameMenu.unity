@@ -979,14 +979,6 @@ PrefabInstance:
       propertyPath: m_Sprite
       value: 
       objectReference: {fileID: -4106741405148212899, guid: 743f46b98061dbb4eb4abf1d8e29b05f, type: 3}
-    - target: {fileID: 8140178651425003591, guid: 8d169eb780ea3f740a37f9eeafcf4be3, type: 3}
-      propertyPath: m_Delegates.Array.data[0].callback.m_PersistentCalls.m_Calls.Array.data[0].m_Target
-      value: 
-      objectReference: {fileID: 100190629}
-    - target: {fileID: 8140178651425003591, guid: 8d169eb780ea3f740a37f9eeafcf4be3, type: 3}
-      propertyPath: m_Delegates.Array.data[1].callback.m_PersistentCalls.m_Calls.Array.data[0].m_Target
-      value: 
-      objectReference: {fileID: 100190629}
     - target: {fileID: 8682530964464031577, guid: 8d169eb780ea3f740a37f9eeafcf4be3, type: 3}
       propertyPath: m_fontAsset
       value: 

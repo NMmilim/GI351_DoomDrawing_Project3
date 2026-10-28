@@ -192,6 +192,9 @@ public class ComboManager : MonoBehaviour
                 else if (Keyboard.current.escapeKey.wasPressedThisFrame)
                 {
                     Application.Quit();
+#if UNITY_EDITOR
+                    UnityEditor.EditorApplication.isPlaying = false;
+#endif
                 }
             }
             return;
@@ -388,7 +391,7 @@ public class ComboManager : MonoBehaviour
     public void ActivateOverload()
     {
         if (!isOverloadReady || isOverloadActive) return;
-        SoundManager.Instance.PlaySound2D("Overload");
+        if (SoundManager.Instance != null) SoundManager.Instance.PlaySound2D("Overload");
 
         isOverloadReady = false;
         isOverloadActive = true;
@@ -804,6 +807,9 @@ public class ComboManager : MonoBehaviour
         if (GUI.Button(quitRect, "QUIT GAME [ESC]"))
         {
             Application.Quit();
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#endif
         }
     }
 }
