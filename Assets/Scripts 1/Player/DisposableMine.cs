@@ -188,6 +188,7 @@ public class DisposableMine : MonoBehaviour
         state = MineState.Detonated;
 
         Vector2 center = transform.position;
+        SoundManager.Instance.PlaySound3D("Detonation", center);
 
         if (explosionVFXPrefab != null)
         {
@@ -200,7 +201,7 @@ public class DisposableMine : MonoBehaviour
 
         if (SoundManager.Instance != null)
         {
-            SoundManager.Instance.PlaySound3D("BulletImpact", center);
+            SoundManager.Instance.PlaySound3D("Explosion", center);
         }
 
         LayerMask searchMask = enemyLayers.value != 0 ? enemyLayers : LayerMask.GetMask("Enemy");

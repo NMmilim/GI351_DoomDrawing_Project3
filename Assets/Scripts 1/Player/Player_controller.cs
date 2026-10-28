@@ -136,7 +136,7 @@ public class Player_controller : MonoBehaviour
     private CinemachineCamera cinemachineCamera;
     private Camera targetMainCamera;
     private GameObject chargeGlowObj;
-
+    private bool lightningWasOnCooldown;
     // Public Getters for Economy & Weapon Systems
     public WeaponType CurrentWeapon => currentWeapon;
     public int Resources => resources;
@@ -256,12 +256,25 @@ public class Player_controller : MonoBehaviour
             lightningCooldownTimer -= Time.deltaTime;
         }
 
+        bool lightningOnCooldown = lightningCooldownTimer > 0f;
+
+        if (lightningWasOnCooldown && !lightningOnCooldown)
+        {
+            if (SoundManager.Instance != null)
+            {
+                SoundManager.Instance.PlaySound2D("Lightning_Charging");
+            }
+        }
+
+        lightningWasOnCooldown = lightningOnCooldown;
+
         // Chain Lightning fire (Right click, semi-auto): requires cooldown ready and resources (if enabled)
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
             if (lightningCooldownTimer <= 0f)
             {
                 int cost = lightningUsesAmmo ? lightningResourceCost : 0;
+
                 if (CanAfford(cost))
                 {
                     ConsumeResources(cost);
@@ -389,14 +402,20 @@ public class Player_controller : MonoBehaviour
         {
             case WeaponType.LaserCannon:
                 gunnerSpriteRenderer.sprite = laserCannonSprite;
+                if (SoundManager.Instance != null)
+                    SoundManager.Instance.PlaySound2D("Digital_Click");
                 break;
 
             case WeaponType.Railgun:
                 gunnerSpriteRenderer.sprite = railgunSprite;
+                if (SoundManager.Instance != null)
+                    SoundManager.Instance.PlaySound2D("UI_Open");
                 break;
 
             case WeaponType.DisposableMine:
                 gunnerSpriteRenderer.sprite = disposableMineSprite;
+                if (SoundManager.Instance != null)
+                    SoundManager.Instance.PlaySound2D("UI_Close");
                 break;
         }
     }
@@ -487,6 +506,8 @@ public class Player_controller : MonoBehaviour
                 {
                     isChargingLaser = true;
                     laserChargeTimer = 0f;
+                    if (SoundManager.Instance != null)
+                        SoundManager.Instance.PlaySound3D("Railgun_Charge", firePoint.position);
                 }
             }
 
@@ -494,7 +515,7 @@ public class Player_controller : MonoBehaviour
             {
                 laserChargeTimer += Time.deltaTime;
                 float chargeRatio = Mathf.Clamp01(laserChargeTimer / maxLaserChargeTime);
-
+               
                 // While charging: camera smoothly zooms OUT
                 targetCameraZoomOffset = chargeRatio * chargeZoomOutAmount;
                 UpdateChargeGlow(chargeRatio);
@@ -507,6 +528,9 @@ public class Player_controller : MonoBehaviour
                 if (laserChargeTimer >= minLaserChargeTime && CanAfford(laserCannonCost))
                 {
                     FireChargedLaser(Mathf.Clamp01(laserChargeTimer / maxLaserChargeTime));
+                    if (SoundManager.Instance != null)
+                        SoundManager.Instance.PlaySound3D("Laser_Shoot", firePoint.position);
+
                 }
                 else
                 {
@@ -522,11 +546,12 @@ public class Player_controller : MonoBehaviour
         laserChargeTimer = 0f;
         targetCameraZoomOffset = 0f;
         CleanupChargeGlow();
-
+     
         ConsumeResources(laserCannonCost);
 
         Transform bullet = Instantiate(leftPrefab, firePoint.position, firePoint.rotation);
-
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySound3D("Laser_Fire", firePoint.position);
         // Scale bullet size and damage based on charge
         float sizeScale = Mathf.Lerp(1.0f, chargedBulletScale, chargeRatio);
         bullet.localScale *= sizeScale;
@@ -556,6 +581,8 @@ public class Player_controller : MonoBehaviour
             }
             else
             {
+                if (SoundManager.Instance != null)
+                    SoundManager.Instance.PlaySound3D("Railgun_Fire", firePoint.position);
                 // Procedural Railgun projectile: spawns and configures RailgunBullet with piercing cyan trail
                 Transform slug = Instantiate(leftPrefab, firePoint.position, firePoint.rotation);
                 Bullet oldBullet = slug.GetComponent<Bullet>();
@@ -574,6 +601,8 @@ public class Player_controller : MonoBehaviour
             ConsumeResources(disposableMineCost);
 
             Vector2 mouseWorld = Camera.main != null ? (Vector2)Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue()) : (Vector2)transform.position + (Vector2)firePoint.right * 4f;
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.PlaySound3D("Mine_Launch", firePoint.position);
 
             GameObject mineObj;
             if (disposableMinePrefab != null)
@@ -612,6 +641,10 @@ public class Player_controller : MonoBehaviour
         // Direction the cannon barrel is pointing outward into space
         Vector2 aimDir = firePoint != null ? (Vector2)firePoint.right : (Vector2)(mouse_transform.rotation * Vector3.right);
         aimDir = aimDir.normalized;
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySound3D("Lightning_Impact", firePoint.position);
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySound3D("Lightning_Strike", firePoint.position);
 
         LayerMask targetMask = lightningTargetLayers.value != 0 ? lightningTargetLayers : LayerMask.GetMask("Enemy");
         if (targetMask.value == 0) targetMask = (1 << 3); // Fallback to layer 3 (Enemy)
@@ -904,6 +937,7 @@ public class Player_controller : MonoBehaviour
 
         if (lightningCooldownTimer > 0f)
         {
+          
             cdStyle.normal.textColor = new Color(1f, 0.45f, 0.2f);
             GUI.Label(new Rect(x + 12, secY, 130f, 18), $"RMB: {lightningCooldownTimer:F1}s", cdStyle);
 
@@ -923,8 +957,10 @@ public class Player_controller : MonoBehaviour
         }
         else
         {
+
             bool canAffordSec = CanAfford(lightningUsesAmmo ? lightningResourceCost : 0);
             cdStyle.normal.textColor = canAffordSec ? (isOverload ? new Color(1f, 0.85f, 0.2f) : new Color(0.3f, 1f, 0.4f)) : Color.gray;
+                
             string readyText = canAffordSec ? (isOverload ? "RMB: [READY - FREE]" : $"RMB Lightning: [READY - {lightningResourceCost} Res]") : "[OUT OF RESOURCES]";
             GUI.Label(new Rect(x + 12, secY, cardWidth - 24, 18), readyText, cdStyle);
         }

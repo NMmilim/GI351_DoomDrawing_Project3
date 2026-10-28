@@ -388,6 +388,7 @@ public class ComboManager : MonoBehaviour
     public void ActivateOverload()
     {
         if (!isOverloadReady || isOverloadActive) return;
+        SoundManager.Instance.PlaySound2D("Overload");
 
         isOverloadReady = false;
         isOverloadActive = true;

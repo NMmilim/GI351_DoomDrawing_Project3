@@ -614,7 +614,8 @@ public class AsteroidSpawner : MonoBehaviour
         GameObject parentObj = new GameObject("ThreatDirectionIndicator");
         parentObj.transform.position = pos;
         parentObj.transform.rotation = rot;
-
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySound2D("Warning");
         // Double chevron layout (two nested arrows pointing toward Earth)
         CreateChevronLine(parentObj, new Vector3(-0.35f, 0f, 0f), 0.55f);
         CreateChevronLine(parentObj, new Vector3(0.2f, 0f, 0f), 0.75f);

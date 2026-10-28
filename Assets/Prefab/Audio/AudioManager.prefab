@@ -216,6 +216,56 @@ MonoBehaviour:
   - groupID: NPC_Pistol_Fire
     clips:
     - {fileID: 8300000, guid: c405ba6688f038a41be22e791a1be8ad, type: 3}
+  - groupID: Laser_Charging
+    clips:
+    - {fileID: 8300000, guid: ca30fede64b66f6468a536e09d6230fc, type: 3}
+  - groupID: Laser_Shoot
+    clips:
+    - {fileID: 8300000, guid: cc5e3e0123c13b5418538c3cb5136058, type: 3}
+    - {fileID: 8300000, guid: c31033098b9c3184da6263e0c2b1a472, type: 3}
+  - groupID: Mine_Launch
+    clips:
+    - {fileID: 8300000, guid: 331264fff2b4a1a47ae49d26d9b9b3e6, type: 3}
+    - {fileID: 8300000, guid: bee3a93d6653fc945b007fe781d38cb8, type: 3}
+  - groupID: UI_Close
+    clips:
+    - {fileID: 8300000, guid: 0cb5ea3635aa25645bbc6dd721c416f1, type: 3}
+  - groupID: UI_Open
+    clips:
+    - {fileID: 8300000, guid: e15c438acbfe57641bece75ae1415099, type: 3}
+  - groupID: Digital_Click
+    clips:
+    - {fileID: 8300000, guid: 30bd03a79dd99954b9d254d4eb85cfb2, type: 3}
+  - groupID: Warning
+    clips:
+    - {fileID: 8300000, guid: ca5eb888dd4aed34880a9801c545379d, type: 3}
+  - groupID: Overload
+    clips:
+    - {fileID: 8300000, guid: 6f20f3da44435824dad8aabf9eda7f3b, type: 3}
+  - groupID: Lightning_Strike
+    clips:
+    - {fileID: 8300000, guid: f390387405517c44ebcd7cde975c8faa, type: 3}
+  - groupID: Lightning_Charging
+    clips:
+    - {fileID: 8300000, guid: 862175f1d0530a74c829b6189cf03bf0, type: 3}
+  - groupID: Lightning_Impact
+    clips:
+    - {fileID: 8300000, guid: b4eb7396722b6234d943ffc8c08ae04a, type: 3}
+  - groupID: Asteroids_Impact
+    clips:
+    - {fileID: 8300000, guid: e002ae0a664210e498a4c7a9ef4e8466, type: 3}
+    - {fileID: 8300000, guid: 39bac4cafcd49804b957ee406bd484c6, type: 3}
+  - groupID: Asteroids_Destoryed
+    clips:
+    - {fileID: 8300000, guid: a14dba33132710d4fa5a4c38cd0ed304, type: 3}
+    - {fileID: 8300000, guid: 2f017511397df1c499e928c136be1a2f, type: 3}
+  - groupID: Explosion
+    clips:
+    - {fileID: 8300000, guid: 920aa7452f390c941ac084beb1a4a4db, type: 3}
+    - {fileID: 8300000, guid: ce5f20628d1802447a7186ac1de1fffe, type: 3}
+  - groupID: Detonation
+    clips:
+    - {fileID: 8300000, guid: 1bf9fbc7760558a4fa1571ed14bbf889, type: 3}
 --- !u!114 &3954555000660303314
 MonoBehaviour:
   m_ObjectHideFlags: 0

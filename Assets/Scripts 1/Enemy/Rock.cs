@@ -534,16 +534,29 @@ public class Rock : MonoBehaviour
 
     private void Die()
     {
-        if (isDead) return;
+        if (isDead)
+        {
+            return;
+        }
+
         isDead = true;
+
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.PlaySound3D(
+                "DebrisImpact",
+                transform.position);
+        }
 
         // Register kill and award chain resources through ComboManager
         if (ComboManager.Instance != null)
         {
-            ComboManager.Instance.RegisterMeteorKill(meteorType, baseResourceDrop, baseChainCost);
+            ComboManager.Instance.RegisterMeteorKill(
+                meteorType,
+                baseResourceDrop,
+                baseChainCost);
         }
 
-        // Magnet meteors do not deal blast damage; they trigger a gravitational vortex pull
         if (meteorType == MeteorType.Magnet)
         {
             EmitVortexPull();

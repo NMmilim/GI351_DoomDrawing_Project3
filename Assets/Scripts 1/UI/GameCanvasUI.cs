@@ -162,6 +162,7 @@ public class GameCanvasUI : MonoBehaviour
     private float trackedEarthHp;
     private float previousEarthDamageTimer;
     private bool earthHpTrackingInitialized;
+    private bool lightningWasOnCooldown;
 
     private void Awake()
     {
@@ -583,6 +584,7 @@ public class GameCanvasUI : MonoBehaviour
 
         if (lightningCooldownText != null)
         {
+
             lightningCooldownText.text = remaining > 0f
                 ? $"{remaining:F1}s"
                 : ready
@@ -603,6 +605,7 @@ public class GameCanvasUI : MonoBehaviour
 
         if (lightningPromptText != null)
         {
+
             lightningPromptText.text = ready
                 ? "RMB - CHAIN LIGHTNING"
                 : remaining > 0f

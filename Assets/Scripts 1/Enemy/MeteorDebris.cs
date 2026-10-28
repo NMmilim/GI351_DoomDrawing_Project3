@@ -107,11 +107,20 @@ public class MeteorDebris : MonoBehaviour
         {
             consumed = true;
             transform.position = pos + direction * bestDistance;
+
+            if (SoundManager.Instance != null)
+            {
+                SoundManager.Instance.PlaySound3D(
+                    "DebrisImpact",
+                    transform.position);
+            }
+
             Destroy(gameObject);
 
-            // Lethal damage -> Rock.Die -> sheds the next generation of shards (the domino step).
-            // isExplosionOrPiercing lets shards hurt armored types if they are ever re-enabled.
-            best.TakeDamage(damage, isExplosionOrPiercing: true);
+            best.TakeDamage(
+                damage,
+                isExplosionOrPiercing: true);
+
             return;
         }
 
